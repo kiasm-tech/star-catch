@@ -1,0 +1,85 @@
+<svg width="680" height="898" viewBox="0 0 680 898" xmlns="http://www.w3.org/2000/svg" role="img" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+<title>Star Catch workflow, from pull request opened to published update</title>
+<desc>Five phases: a pull request opens and a generation run is queued; a worker job fetches the PR, builds context with Claude, writes a technical and a business script, narrates them with Azure Speech and assembles Remotion scenes saved as a draft; two comments go back on the PR and developers correct the draft from GitHub or the platform; merging publishes it and emails the resolved stakeholder list; technical stakeholders earn XP and business stakeholders react and ask questions.</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1c1917" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<style>
+  text { fill: #1c1917; }
+  .t { font-size: 14px; }
+  .ts { font-size: 12px; fill: #6b6560; }
+  .th { font-size: 14px; font-weight: 500; }
+  .box { fill: #faf8f4; stroke: #ddd8cf; stroke-width: 0.5; }
+  .phase { fill: none; stroke: #ddd8cf; stroke-width: 0.5; stroke-dasharray: 4 4; }
+  .arr { stroke: #1c1917; stroke-width: 1.5; }
+  .gray rect { fill: #ece6d9; stroke: #ddd8cf; stroke-width: 0.5; }
+  .gray text.th { fill: #1c1917; }
+  .gray text.ts { fill: #6b6560; }
+  .purple rect { fill: #e5e9e3; stroke: #1a6585; stroke-width: 0.5; }
+  .purple text.th { fill: #0d4f6e; }
+  .purple text.ts { fill: #1a6585; }
+  .teal rect { fill: #ecf3f5; stroke: #1a6585; stroke-width: 0.5; }
+  .teal text.th { fill: #0d4f6e; }
+  .teal text.ts { fill: #1a6585; }
+</style>
+
+<rect class="phase" x="40" y="40" width="600" height="96" rx="8"/>
+<text class="ts" x="52" y="60">1 &#183; Pull request opened</text>
+<g class="gray"><rect x="52" y="72" width="170" height="48" rx="4"/><text class="th" x="64" y="92">GitHub</text><text class="ts" x="64" y="109">pull request opened</text></g>
+<line class="arr" x1="222" y1="96" x2="238" y2="96" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="240" y="72" width="180" height="48" rx="4"/><text class="th" x="252" y="92">Webhook route</text><text class="ts" x="252" y="109">Next.js, verified</text></g>
+<line class="arr" x1="420" y1="96" x2="436" y2="96" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="438" y="72" width="190" height="48" rx="4"/><text class="th" x="450" y="92">Queue the run</text><text class="ts" x="450" y="109">Cloud Tasks</text></g>
+<line class="arr" x1="340" y1="136" x2="340" y2="150" marker-end="url(#arrow)"/>
+
+<rect class="phase" x="40" y="152" width="600" height="180" rx="8"/>
+<text class="ts" x="52" y="172">2 &#183; Generation run &#8212; worker job</text>
+<g class="purple"><rect x="52" y="184" width="180" height="52" rx="4"/><text class="th" x="64" y="205">Fetch the PR</text><text class="ts" x="64" y="222">Octokit, app token</text></g>
+<line class="arr" x1="232" y1="210" x2="244" y2="210" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="246" y="184" width="180" height="52" rx="4"/><text class="th" x="258" y="205">Build PR context</text><text class="ts" x="258" y="222">Claude</text></g>
+<line class="arr" x1="426" y1="210" x2="438" y2="210" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="440" y="184" width="188" height="52" rx="4"/><text class="th" x="452" y="205">Write two scripts</text><text class="ts" x="452" y="222">technical, business</text></g>
+<path class="arr" fill="none" d="M534 236 V246 H142 V252" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="52" y="256" width="180" height="52" rx="4"/><text class="th" x="64" y="277">Narrate</text><text class="ts" x="64" y="294">Azure Speech, timings</text></g>
+<line class="arr" x1="232" y1="282" x2="244" y2="282" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="246" y="256" width="180" height="52" rx="4"/><text class="th" x="258" y="277">Build the scenes</text><text class="ts" x="258" y="294">Remotion composition</text></g>
+<line class="arr" x1="426" y1="282" x2="438" y2="282" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="440" y="256" width="188" height="52" rx="4"/><text class="th" x="452" y="277">Save as draft</text><text class="ts" x="452" y="294">Postgres</text></g>
+<line class="arr" x1="340" y1="332" x2="340" y2="346" marker-end="url(#arrow)"/>
+
+<rect class="phase" x="40" y="348" width="600" height="180" rx="8"/>
+<text class="ts" x="52" y="368">3 &#183; Draft &#8212; developers review and correct</text>
+<g class="gray"><rect x="52" y="380" width="180" height="56" rx="4"/><text class="th" x="64" y="402">Two PR comments</text><text class="ts" x="64" y="419">each links to Crux</text></g>
+<line class="arr" x1="232" y1="408" x2="244" y2="408" marker-end="url(#arrow)"/>
+<g class="teal"><rect x="246" y="380" width="180" height="56" rx="4"/><text class="th" x="258" y="402">Draft page</text><text class="ts" x="258" y="419">Remotion Player</text></g>
+<line class="arr" x1="426" y1="408" x2="438" y2="408" marker-end="url(#arrow)"/>
+<g class="teal"><rect x="440" y="380" width="188" height="56" rx="4"/><text class="th" x="452" y="402">Subscribers</text><text class="ts" x="452" y="419">add business emails</text></g>
+<line class="arr" x1="142" y1="436" x2="142" y2="450" marker-end="url(#arrow)"/>
+<line class="arr" x1="336" y1="436" x2="336" y2="450" marker-end="url(#arrow)"/>
+<g class="gray"><rect x="52" y="452" width="180" height="56" rx="4"/><text class="th" x="64" y="474">@star-catch update</text><text class="ts" x="64" y="491">issue comment</text></g>
+<line class="arr" x1="232" y1="480" x2="244" y2="480" marker-end="url(#arrow)"/>
+<g class="teal"><rect x="246" y="452" width="180" height="56" rx="4"/><text class="th" x="258" y="474">Side chatbot</text><text class="ts" x="258" y="491">asks for changes</text></g>
+<line class="arr" x1="426" y1="480" x2="438" y2="480" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="440" y="452" width="188" height="56" rx="4"/><text class="th" x="452" y="474">Regenerate</text><text class="ts" x="452" y="491">returns to step 2</text></g>
+<line class="arr" x1="340" y1="528" x2="340" y2="542" marker-end="url(#arrow)"/>
+
+<rect class="phase" x="40" y="544" width="600" height="96" rx="8"/>
+<text class="ts" x="52" y="564">4 &#183; Merge publishes the update</text>
+<g class="gray"><rect x="52" y="576" width="180" height="48" rx="4"/><text class="th" x="64" y="596">PR merged</text><text class="ts" x="64" y="613">becomes published</text></g>
+<line class="arr" x1="232" y1="600" x2="244" y2="600" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="246" y="576" width="180" height="48" rx="4"/><text class="th" x="258" y="596">Resolve recipients</text><text class="ts" x="258" y="613">from PR + repo list</text></g>
+<line class="arr" x1="426" y1="600" x2="438" y2="600" marker-end="url(#arrow)"/>
+<g class="purple"><rect x="440" y="576" width="188" height="48" rx="4"/><text class="th" x="452" y="596">Email fan-out</text><text class="ts" x="452" y="613">Resend, magic link</text></g>
+<line class="arr" x1="340" y1="640" x2="340" y2="654" marker-end="url(#arrow)"/>
+
+<rect class="phase" x="40" y="656" width="600" height="110" rx="8"/>
+<text class="ts" x="52" y="676">5 &#183; Watching</text>
+<g class="teal"><rect x="52" y="688" width="280" height="60" rx="4"/><text class="th" x="64" y="712">Technical stakeholders</text><text class="ts" x="64" y="730">XP on finish, quiz optional</text></g>
+<g class="teal"><rect x="352" y="688" width="276" height="60" rx="4"/><text class="th" x="364" y="712">Business stakeholders</text><text class="ts" x="364" y="730">emoji reaction, ask more</text></g>
+
+<rect class="phase" x="40" y="782" width="600" height="96" rx="8"/>
+<text class="ts" x="52" y="802">Shared services</text>
+<g class="gray"><rect x="52" y="814" width="180" height="48" rx="4"/><text class="th" x="64" y="834">Postgres</text><text class="ts" x="64" y="851">catches, state, XP</text></g>
+<g class="gray"><rect x="246" y="814" width="180" height="48" rx="4"/><text class="th" x="258" y="834">Cloud Storage</text><text class="ts" x="258" y="851">audio, MP4 exports</text></g>
+<g class="gray"><rect x="440" y="814" width="188" height="48" rx="4"/><text class="th" x="452" y="834">Firebase Auth</text><text class="ts" x="452" y="851">magic-link sign-in</text></g>
+</svg>
