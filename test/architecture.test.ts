@@ -9,10 +9,14 @@ const CONTRACTS = "@kiasm-tech/star-catch-contracts";
 const TESTKIT = "@star-catch/testkit";
 
 /** Dependencies point inward: apps → adapters → core (pipeline) → contracts. */
-const ALLOWED: Record<string, string[]> = {};
+const ALLOWED: Record<string, string[]> = {
+  [CONTRACTS]: [],
+};
 
 /** Packages that must stay free of I/O, and the only modules they may import. */
-const PURE: Record<string, string[]> = {};
+const PURE: Record<string, string[]> = {
+  "packages/contracts": ["zod"],
+};
 
 interface Manifest {
   name: string;
