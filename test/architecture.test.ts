@@ -6,17 +6,20 @@ import { describe, expect, it } from "vitest";
 const root = fileURLToPath(new URL("..", import.meta.url));
 
 const CONTRACTS = "@kiasm-tech/star-catch-contracts";
+const PIPELINE = "@star-catch/pipeline";
 const TESTKIT = "@star-catch/testkit";
 
 /** Dependencies point inward: apps → adapters → core (pipeline) → contracts. */
 const ALLOWED: Record<string, string[]> = {
   [CONTRACTS]: [],
   [TESTKIT]: [CONTRACTS],
+  [PIPELINE]: [CONTRACTS],
 };
 
 /** Packages that must stay free of I/O, and the only modules they may import. */
 const PURE: Record<string, string[]> = {
   "packages/contracts": ["zod"],
+  "packages/pipeline": ["zod", CONTRACTS],
 };
 
 interface Manifest {

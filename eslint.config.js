@@ -6,6 +6,7 @@ const io = {
   group: ["node:*", "fs", "fs/*", "path", "os", "child_process", "@octokit/*"],
   message: "The core and the contracts stay free of I/O: put it in an adapter.",
 };
+const outward = (...names) => names.map((name) => ({ name, message: "Dependencies point inward (see test/architecture.test.ts)." }));
 
 export default tseslint.config(
   { ignores: ["**/node_modules/", "**/dist/", "fixtures/", "docs/", "coverage/"] },
@@ -23,6 +24,13 @@ export default tseslint.config(
     ignores: ["**/*.test.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [io, { group: ["@star-catch/*"], message: "Contracts depend on nothing in this repo." }] }],
+    },
+  },
+  {
+    files: ["packages/pipeline/src/**/*.ts"],
+    ignores: ["**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [io], paths: outward("@star-catch/adapters", "@star-catch/testkit") }],
     },
   },
 );

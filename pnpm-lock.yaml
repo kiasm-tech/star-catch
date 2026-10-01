@@ -36,6 +36,19 @@ importers:
         specifier: ^4.4.3
         version: 4.6.5
 
+  packages/pipeline:
+    dependencies:
+      '@kiasm-tech/star-catch-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      zod:
+        specifier: ^4.4.3
+        version: 4.6.5
+    devDependencies:
+      '@star-catch/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+
   packages/testkit:
     dependencies:
       '@kiasm-tech/star-catch-contracts':
