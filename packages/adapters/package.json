@@ -1,0 +1,17 @@
+{
+  "name": "@star-catch/adapters",
+  "private": true,
+  "description": "Driven adapters: implementations of the core's ports (GitHub, the file system).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "@octokit/rest": "^22.0.1",
+    "@star-catch/pipeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@star-catch/testkit": "workspace:*"
+  }
+}

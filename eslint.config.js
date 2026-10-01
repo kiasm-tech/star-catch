@@ -33,4 +33,11 @@ export default tseslint.config(
       "no-restricted-imports": ["error", { patterns: [io], paths: outward("@star-catch/adapters", "@star-catch/testkit") }],
     },
   },
+  {
+    files: ["packages/adapters/src/**/*.ts"],
+    ignores: ["**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: outward("@star-catch/testkit") }],
+    },
+  },
 );
