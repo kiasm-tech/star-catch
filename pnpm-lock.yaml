@@ -36,6 +36,12 @@ importers:
         specifier: ^4.4.3
         version: 4.6.5
 
+  packages/testkit:
+    dependencies:
+      '@kiasm-tech/star-catch-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
 packages:
 
   '@esbuild/aix-ppc64@0.28.2':
