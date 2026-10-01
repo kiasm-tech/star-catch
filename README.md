@@ -6,6 +6,15 @@ A merged pull request becomes a short narrated update — synced scenes with nar
 
 This repository is the backend: it receives GitHub's webhooks, analyses pull requests and builds the updates. The pages live in Crux.
 
+## Develop
+
+```sh
+pnpm install
+pnpm test && pnpm typecheck && pnpm lint
+```
+
+Layout and rules: [docs/backend.md](docs/backend.md) §3.
+
 ## Docs
 
 | Doc | Read it for |
