@@ -1,0 +1,43 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 110,
+    "headSha": "efc57fa26e0a7b5340f6735a639224acf97de28c"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "shop/invoices.py#_with_vat",
+      "file": "shop/invoices.py",
+      "name": "_with_vat",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "refactorings": [
+        "rename"
+      ]
+    },
+    {
+      "id": "shop/invoices.py#line_total",
+      "file": "shop/invoices.py",
+      "name": "line_total",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "rename"
+      ]
+    },
+    {
+      "id": "shop/invoices.py#invoice_total",
+      "file": "shop/invoices.py",
+      "name": "invoice_total",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "rename"
+      ]
+    }
+  ],
+  "excluded": []
+}

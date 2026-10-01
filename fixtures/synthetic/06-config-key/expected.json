@@ -1,0 +1,23 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 106,
+    "headSha": "cb5eb2f10e888b7c8c11cc64dca180bb6183a0a5"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "config/flags.json#expressShipping",
+      "file": "config/flags.json",
+      "name": "expressShipping",
+      "unitKind": "configKey",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": [],
+      "labels": {
+        "kind": "configuration"
+      }
+    }
+  ],
+  "excluded": []
+}

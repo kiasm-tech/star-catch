@@ -1,0 +1,36 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 109,
+    "headSha": "50e2617f2dc60b96667e3f44a8a9c48d1bd70e1a"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/orders/receipt.ts#orderTotal",
+      "file": "src/orders/receipt.ts",
+      "name": "orderTotal",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": []
+    },
+    {
+      "id": "src/orders/receipt.ts#receiptLines",
+      "file": "src/orders/receipt.ts",
+      "name": "receiptLines",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "bodyChanged",
+      "refactorings": []
+    }
+  ],
+  "links": [
+    {
+      "from": "src/orders/receipt.ts#receiptLines",
+      "to": "src/orders/receipt.ts#orderTotal",
+      "type": "calls"
+    }
+  ],
+  "excluded": []
+}

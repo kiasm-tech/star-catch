@@ -1,0 +1,52 @@
+{
+  "fullName": "acme/shop",
+  "number": 108,
+  "url": "https://github.com/acme/shop/pull/108",
+  "title": "fix(billing): say when the plan renews",
+  "body": "The billing page said the plan renews automatically each month, which left people guessing about the date. It now says the plan renews on the first day of each month, and the page test checks the new text.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "fix/billing-renewal-copy",
+  "baseSha": "1502b427f2bb751335d5a44f7f96476bd14ccc7b",
+  "headSha": "5c2b72f908a8825826ad2aa6aca2ccf592a4a836",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "app/billing/page.tsx",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -2,7 +2,7 @@ export default function BillingPage() {\n   return (\n     <main>\n       <h1>Billing</h1>\n-      <p>Your plan renews automatically each month.</p>\n+      <p>Your plan renews on the first day of each month.</p>\n     </main>\n   );\n }",
+      "baseContent": "export default function BillingPage() {\n  return (\n    <main>\n      <h1>Billing</h1>\n      <p>Your plan renews automatically each month.</p>\n    </main>\n  );\n}\n",
+      "headContent": "export default function BillingPage() {\n  return (\n    <main>\n      <h1>Billing</h1>\n      <p>Your plan renews on the first day of each month.</p>\n    </main>\n  );\n}\n"
+    },
+    {
+      "filename": "app/billing/page.test.tsx",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -5,6 +5,6 @@ import BillingPage from \"./page\";\n describe(\"BillingPage\", () => {\n   it(\"explains when the plan renews\", () => {\n     render(<BillingPage />);\n-    expect(screen.getByText(\"Your plan renews automatically each month.\")).toBeTruthy();\n+    expect(screen.getByText(\"Your plan renews on the first day of each month.\")).toBeTruthy();\n   });\n });",
+      "baseContent": "import { render, screen } from \"@testing-library/react\";\nimport { describe, expect, it } from \"vitest\";\nimport BillingPage from \"./page\";\n\ndescribe(\"BillingPage\", () => {\n  it(\"explains when the plan renews\", () => {\n    render(<BillingPage />);\n    expect(screen.getByText(\"Your plan renews automatically each month.\")).toBeTruthy();\n  });\n});\n",
+      "headContent": "import { render, screen } from \"@testing-library/react\";\nimport { describe, expect, it } from \"vitest\";\nimport BillingPage from \"./page\";\n\ndescribe(\"BillingPage\", () => {\n  it(\"explains when the plan renews\", () => {\n    render(<BillingPage />);\n    expect(screen.getByText(\"Your plan renews on the first day of each month.\")).toBeTruthy();\n  });\n});\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "8592719d6c06dffee6d88c812d4861f6307bdca6",
+      "message": "fix(billing): say when the plan renews"
+    },
+    {
+      "sha": "5c2b72f908a8825826ad2aa6aca2ccf592a4a836",
+      "message": "test(billing): update the renewal text"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

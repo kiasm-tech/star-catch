@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 111,
+  "url": "https://github.com/acme/shop/pull/111",
+  "title": "feat(shipping): free shipping from 40 EUR",
+  "body": "Marketing is lowering the free shipping threshold for the autumn campaign. Orders of 40 EUR or more now ship for free instead of 50 EUR or more.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "feat/free-shipping-40",
+  "baseSha": "ad88c36d78a3658965984e284f9f2fc07c7b1e3e",
+  "headSha": "4e660e856a0ff842184458da8247cce728d593dd",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "shop/shipping.py",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,4 +1,4 @@\n def shipping_fee(subtotal):\n-    if subtotal >= 50:\n+    if subtotal >= 40:\n         return 0\n     return 4.99",
+      "baseContent": "def shipping_fee(subtotal):\n    if subtotal >= 50:\n        return 0\n    return 4.99\n",
+      "headContent": "def shipping_fee(subtotal):\n    if subtotal >= 40:\n        return 0\n    return 4.99\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "4e660e856a0ff842184458da8247cce728d593dd",
+      "message": "feat(shipping): free shipping from 40 EUR"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

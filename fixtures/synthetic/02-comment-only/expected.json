@@ -1,0 +1,19 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 102,
+    "headSha": "284603d3d71835bab1ec5858ea62940f2e75d8ed"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/lib/shipping.ts#shippingCost",
+      "file": "src/lib/shipping.ts",
+      "name": "shippingCost",
+      "unitKind": "declaration",
+      "verdict": "notAChange",
+      "refactorings": []
+    }
+  ],
+  "excluded": []
+}

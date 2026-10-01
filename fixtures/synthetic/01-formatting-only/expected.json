@@ -1,0 +1,19 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 101,
+    "headSha": "be4f1fab42c91b2d2f2a9383992d9b721d77e109"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/lib/formatPrice.ts#formatPrice",
+      "file": "src/lib/formatPrice.ts",
+      "name": "formatPrice",
+      "unitKind": "declaration",
+      "verdict": "notAChange",
+      "refactorings": []
+    }
+  ],
+  "excluded": []
+}

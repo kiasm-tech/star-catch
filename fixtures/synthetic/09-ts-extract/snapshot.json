@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 109,
+  "url": "https://github.com/acme/shop/pull/109",
+  "title": "refactor(orders): extract orderTotal from receiptLines",
+  "body": "The invoice email needs the same total the receipt prints. This moves the subtotal and tax calculation out of receiptLines into an exported orderTotal so both can share it.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "refactor/order-total",
+  "baseSha": "98a351bbaa8c436fca302ae5ff80e0cebad43121",
+  "headSha": "50e2617f2dc60b96667e3f44a8a9c48d1bd70e1a",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/orders/receipt.ts",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 3,
+      "patch": "@@ -1,9 +1,13 @@\n type Order = { items: { name: string; qty: number; unitPrice: number }[]; taxRate: number };\n \n-export function receiptLines(order: Order): string[] {\n-  const lines = order.items.map((item) => `${item.qty} x ${item.name}`);\n+export function orderTotal(order: Order): number {\n   const subtotal = order.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);\n   const tax = Math.round(subtotal * order.taxRate);\n-  lines.push(`Total: ${subtotal + tax}`);\n+  return subtotal + tax;\n+}\n+\n+export function receiptLines(order: Order): string[] {\n+  const lines = order.items.map((item) => `${item.qty} x ${item.name}`);\n+  lines.push(`Total: ${orderTotal(order)}`);\n   return lines;\n }",
+      "baseContent": "type Order = { items: { name: string; qty: number; unitPrice: number }[]; taxRate: number };\n\nexport function receiptLines(order: Order): string[] {\n  const lines = order.items.map((item) => `${item.qty} x ${item.name}`);\n  const subtotal = order.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);\n  const tax = Math.round(subtotal * order.taxRate);\n  lines.push(`Total: ${subtotal + tax}`);\n  return lines;\n}\n",
+      "headContent": "type Order = { items: { name: string; qty: number; unitPrice: number }[]; taxRate: number };\n\nexport function orderTotal(order: Order): number {\n  const subtotal = order.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);\n  const tax = Math.round(subtotal * order.taxRate);\n  return subtotal + tax;\n}\n\nexport function receiptLines(order: Order): string[] {\n  const lines = order.items.map((item) => `${item.qty} x ${item.name}`);\n  lines.push(`Total: ${orderTotal(order)}`);\n  return lines;\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "50e2617f2dc60b96667e3f44a8a9c48d1bd70e1a",
+      "message": "refactor(orders): extract orderTotal from receiptLines"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

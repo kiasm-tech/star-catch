@@ -1,0 +1,33 @@
+{
+  "action": "opened",
+  "number": 3443,
+  "installation": {
+    "id": 1
+  },
+  "repository": {
+    "full_name": "pmndrs/zustand",
+    "name": "zustand",
+    "owner": {
+      "login": "pmndrs"
+    }
+  },
+  "pull_request": {
+    "number": 3443,
+    "title": "refactor(devtools): remove duplicate module augmentation",
+    "user": {
+      "login": "mahmoodhamdi"
+    },
+    "head": {
+      "sha": "d47fadf91db1d8342e086873fee0d43bb188a544",
+      "ref": "refactor/remove-duplicate-devtools-module-augmentation"
+    },
+    "base": {
+      "sha": "206012dbd1ae046ea0aefb9cd7bf8bba913c6459",
+      "ref": "main"
+    }
+  },
+  "sender": {
+    "login": "mahmoodhamdi",
+    "type": "User"
+  }
+}

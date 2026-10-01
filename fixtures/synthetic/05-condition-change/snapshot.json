@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 105,
+  "url": "https://github.com/acme/shop/pull/105",
+  "title": "fix(pricing): apply the bulk discount from 5 units",
+  "body": "Customers ordering 5 to 9 units never got the bulk discount, and support keeps getting tickets about it. This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "fix/bulk-discount-threshold",
+  "baseSha": "112edb972ba0b1e571d5dda43c03b6fe126ca5ec",
+  "headSha": "5a922e4f05b9624b1f9941a7764446cda0396e0c",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/pricing/discount.ts",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,7 +1,7 @@\n export const BULK_DISCOUNT_RATE = 0.1;\n \n export function bulkDiscount(quantity: number, unitPrice: number): number {\n-  if (quantity >= 10) {\n+  if (quantity >= 5) {\n     return quantity * unitPrice * BULK_DISCOUNT_RATE;\n   }\n   return 0;",
+      "baseContent": "export const BULK_DISCOUNT_RATE = 0.1;\n\nexport function bulkDiscount(quantity: number, unitPrice: number): number {\n  if (quantity >= 10) {\n    return quantity * unitPrice * BULK_DISCOUNT_RATE;\n  }\n  return 0;\n}\n",
+      "headContent": "export const BULK_DISCOUNT_RATE = 0.1;\n\nexport function bulkDiscount(quantity: number, unitPrice: number): number {\n  if (quantity >= 5) {\n    return quantity * unitPrice * BULK_DISCOUNT_RATE;\n  }\n  return 0;\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "5a922e4f05b9624b1f9941a7764446cda0396e0c",
+      "message": "fix(pricing): apply the bulk discount from 5 units"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

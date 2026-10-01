@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 102,
+  "url": "https://github.com/acme/shop/pull/102",
+  "title": "docs: clarify the shipping cost comments",
+  "body": "The comments in shippingCost did not say what currency the numbers are in or that a started kilogram is charged in full. This rewrites them; the code is untouched.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "docs/shipping-comments",
+  "baseSha": "05e02ec4b250e9614a8067261a2a55a2a8fbef2b",
+  "headSha": "284603d3d71835bab1ec5858ea62940f2e75d8ed",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/lib/shipping.ts",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "patch": "@@ -1,6 +1,6 @@\n export function shippingCost(weightKg: number): number {\n-  // Flat rate up to 2 kg\n+  // Parcels up to 2 kg pay the flat rate of 4.99 EUR (in cents)\n   if (weightKg <= 2) return 499;\n-  // Then 1.50 per extra kg\n+  // Every started kilogram above that adds 1.50 EUR\n   return 499 + Math.ceil(weightKg - 2) * 150;\n }",
+      "baseContent": "export function shippingCost(weightKg: number): number {\n  // Flat rate up to 2 kg\n  if (weightKg <= 2) return 499;\n  // Then 1.50 per extra kg\n  return 499 + Math.ceil(weightKg - 2) * 150;\n}\n",
+      "headContent": "export function shippingCost(weightKg: number): number {\n  // Parcels up to 2 kg pay the flat rate of 4.99 EUR (in cents)\n  if (weightKg <= 2) return 499;\n  // Every started kilogram above that adds 1.50 EUR\n  return 499 + Math.ceil(weightKg - 2) * 150;\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "284603d3d71835bab1ec5858ea62940f2e75d8ed",
+      "message": "docs: clarify the shipping cost comments"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

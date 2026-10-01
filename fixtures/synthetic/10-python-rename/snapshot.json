@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 110,
+  "url": "https://github.com/acme/shop/pull/110",
+  "title": "refactor(invoices): rename _gross to _with_vat",
+  "body": "The name _gross did not say which tax it adds, and we are about to add a second one. This renames it to _with_vat and updates both callers.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "refactor/with-vat-name",
+  "baseSha": "1fc808a742a73bb9f4660dd32e81b312d5984cd0",
+  "headSha": "efc57fa26e0a7b5340f6735a639224acf97de28c",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "shop/invoices.py",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 3,
+      "patch": "@@ -1,13 +1,13 @@\n VAT_RATE = 0.21\n \n \n-def _gross(amount):\n+def _with_vat(amount):\n     return round(amount * (1 + VAT_RATE), 2)\n \n \n def line_total(qty, unit_price):\n-    return _gross(qty * unit_price)\n+    return _with_vat(qty * unit_price)\n \n \n def invoice_total(lines):\n-    return sum(_gross(qty * price) for qty, price in lines)\n+    return sum(_with_vat(qty * price) for qty, price in lines)",
+      "baseContent": "VAT_RATE = 0.21\n\n\ndef _gross(amount):\n    return round(amount * (1 + VAT_RATE), 2)\n\n\ndef line_total(qty, unit_price):\n    return _gross(qty * unit_price)\n\n\ndef invoice_total(lines):\n    return sum(_gross(qty * price) for qty, price in lines)\n",
+      "headContent": "VAT_RATE = 0.21\n\n\ndef _with_vat(amount):\n    return round(amount * (1 + VAT_RATE), 2)\n\n\ndef line_total(qty, unit_price):\n    return _with_vat(qty * unit_price)\n\n\ndef invoice_total(lines):\n    return sum(_with_vat(qty * price) for qty, price in lines)\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "efc57fa26e0a7b5340f6735a639224acf97de28c",
+      "message": "refactor(invoices): rename _gross to _with_vat"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

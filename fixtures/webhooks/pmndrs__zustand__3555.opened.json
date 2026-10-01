@@ -1,0 +1,33 @@
+{
+  "action": "opened",
+  "number": 3555,
+  "installation": {
+    "id": 1
+  },
+  "repository": {
+    "full_name": "pmndrs/zustand",
+    "name": "zustand",
+    "owner": {
+      "login": "pmndrs"
+    }
+  },
+  "pull_request": {
+    "number": 3555,
+    "title": "fix(persist): clearStorage() should invalidate concurrent async rehydration",
+    "user": {
+      "login": "Copilot"
+    },
+    "head": {
+      "sha": "f7e54de7bae49099f67ecb9a3635c1a48b72f97b",
+      "ref": "copilot/fix-issue-with-selectors"
+    },
+    "base": {
+      "sha": "f44cecc72a8ec39fbd270fc29e2058806932bf2a",
+      "ref": "main"
+    }
+  },
+  "sender": {
+    "login": "Copilot",
+    "type": "User"
+  }
+}

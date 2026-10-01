@@ -1,0 +1,52 @@
+{
+  "fullName": "acme/shop",
+  "number": 113,
+  "url": "https://github.com/acme/shop/pull/113",
+  "title": "refactor(orders): extract subtotal and move formatCents to Money",
+  "body": "OrderService was doing its own money formatting and summing inline. This extracts the item sum into a subtotal method and moves formatCents to Money, next to parseCents, so the other services can use it.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "refactor/order-service-cleanup",
+  "baseSha": "fb2bbfb6c012754eabd4228cbae4c28d78c2911d",
+  "headSha": "a7921a34857f4871e5ac0f5bcc4ad8f9de1d9672",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/main/java/com/acme/shop/OrderService.java",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 6,
+      "patch": "@@ -4,22 +4,23 @@ import java.util.List;\n \n public class OrderService {\n     public long total(List<LineItem> items) {\n+        long subtotal = subtotal(items);\n+        return subtotal + shipping(subtotal);\n+    }\n+\n+    private long subtotal(List<LineItem> items) {\n         long subtotal = 0;\n         for (LineItem item : items) {\n             subtotal += item.price() * item.quantity();\n         }\n-        return subtotal + shipping(subtotal);\n+        return subtotal;\n     }\n \n     public String receipt(List<LineItem> items) {\n-        return \"Total: \" + formatCents(total(items));\n+        return \"Total: \" + Money.formatCents(total(items));\n     }\n \n     private long shipping(long subtotal) {\n         return subtotal >= 5000 ? 0 : 499;\n     }\n-\n-    static String formatCents(long cents) {\n-        return String.format(\"%d.%02d\", cents / 100, cents % 100);\n-    }\n }",
+      "baseContent": "package com.acme.shop;\n\nimport java.util.List;\n\npublic class OrderService {\n    public long total(List<LineItem> items) {\n        long subtotal = 0;\n        for (LineItem item : items) {\n            subtotal += item.price() * item.quantity();\n        }\n        return subtotal + shipping(subtotal);\n    }\n\n    public String receipt(List<LineItem> items) {\n        return \"Total: \" + formatCents(total(items));\n    }\n\n    private long shipping(long subtotal) {\n        return subtotal >= 5000 ? 0 : 499;\n    }\n\n    static String formatCents(long cents) {\n        return String.format(\"%d.%02d\", cents / 100, cents % 100);\n    }\n}\n",
+      "headContent": "package com.acme.shop;\n\nimport java.util.List;\n\npublic class OrderService {\n    public long total(List<LineItem> items) {\n        long subtotal = subtotal(items);\n        return subtotal + shipping(subtotal);\n    }\n\n    private long subtotal(List<LineItem> items) {\n        long subtotal = 0;\n        for (LineItem item : items) {\n            subtotal += item.price() * item.quantity();\n        }\n        return subtotal;\n    }\n\n    public String receipt(List<LineItem> items) {\n        return \"Total: \" + Money.formatCents(total(items));\n    }\n\n    private long shipping(long subtotal) {\n        return subtotal >= 5000 ? 0 : 499;\n    }\n}\n"
+    },
+    {
+      "filename": "src/main/java/com/acme/shop/Money.java",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "patch": "@@ -7,4 +7,8 @@ public final class Money {\n         String[] parts = amount.split(\"\\\\.\");\n         return Long.parseLong(parts[0]) * 100 + Long.parseLong(parts[1]);\n     }\n+\n+    static String formatCents(long cents) {\n+        return String.format(\"%d.%02d\", cents / 100, cents % 100);\n+    }\n }",
+      "baseContent": "package com.acme.shop;\n\npublic final class Money {\n    private Money() {}\n\n    static long parseCents(String amount) {\n        String[] parts = amount.split(\"\\\\.\");\n        return Long.parseLong(parts[0]) * 100 + Long.parseLong(parts[1]);\n    }\n}\n",
+      "headContent": "package com.acme.shop;\n\npublic final class Money {\n    private Money() {}\n\n    static long parseCents(String amount) {\n        String[] parts = amount.split(\"\\\\.\");\n        return Long.parseLong(parts[0]) * 100 + Long.parseLong(parts[1]);\n    }\n\n    static String formatCents(long cents) {\n        return String.format(\"%d.%02d\", cents / 100, cents % 100);\n    }\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "7f7adfa9adf98dcea4d5fd61b9f733087886d0a0",
+      "message": "refactor(orders): extract OrderService.subtotal"
+    },
+    {
+      "sha": "a7921a34857f4871e5ac0f5bcc4ad8f9de1d9672",
+      "message": "refactor(orders): move formatCents to Money"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}
