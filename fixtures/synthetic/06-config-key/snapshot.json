@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 106,
+  "url": "https://github.com/acme/shop/pull/106",
+  "title": "feat(flags): add the expressShipping flag",
+  "body": "Adds an expressShipping feature flag, off by default, so the express shipping option can be rolled out gradually once the carrier integration lands.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "feat/express-shipping-flag",
+  "baseSha": "04e40bcad84146bb4d7e13b7fb5df95f8ca7aac0",
+  "headSha": "cb5eb2f10e888b7c8c11cc64dca180bb6183a0a5",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "config/flags.json",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "patch": "@@ -1,4 +1,5 @@\n {\n+  \"expressShipping\": false,\n   \"newCheckout\": false,\n   \"savedCarts\": true\n }",
+      "baseContent": "{\n  \"newCheckout\": false,\n  \"savedCarts\": true\n}\n",
+      "headContent": "{\n  \"expressShipping\": false,\n  \"newCheckout\": false,\n  \"savedCarts\": true\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "cb5eb2f10e888b7c8c11cc64dca180bb6183a0a5",
+      "message": "feat(flags): add the expressShipping flag"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

@@ -1,0 +1,43 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 103,
+    "headSha": "54beed305f6558085d404831a15cfa65bf0a5d22"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/cart/totals.ts#itemTotal",
+      "file": "src/cart/totals.ts",
+      "name": "itemTotal",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "refactorings": [
+        "rename"
+      ]
+    },
+    {
+      "id": "src/cart/totals.ts#cartTotal",
+      "file": "src/cart/totals.ts",
+      "name": "cartTotal",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "rename"
+      ]
+    },
+    {
+      "id": "src/cart/totals.ts#formatLine",
+      "file": "src/cart/totals.ts",
+      "name": "formatLine",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "rename"
+      ]
+    }
+  ],
+  "excluded": []
+}

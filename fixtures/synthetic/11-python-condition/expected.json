@@ -1,0 +1,20 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 111,
+    "headSha": "4e660e856a0ff842184458da8247cce728d593dd"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "shop/shipping.py#shipping_fee",
+      "file": "shop/shipping.py",
+      "name": "shipping_fee",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "conditionChanged",
+      "refactorings": []
+    }
+  ],
+  "excluded": []
+}

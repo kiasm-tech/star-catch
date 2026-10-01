@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 104,
+  "url": "https://github.com/acme/shop/pull/104",
+  "title": "chore(deps): refresh the lockfile",
+  "body": "Runs pnpm update inside the existing ranges so the lockfile picks up the latest patch release of zod. package.json is unchanged.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "chore/refresh-lockfile",
+  "baseSha": "0c8474a901809c78558ec41bce44554c05c0a4a1",
+  "headSha": "e61fc687389e54581040dd0fd6ccf2182e5556d1",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "pnpm-lock.yaml",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 4,
+      "patch": "@@ -6,13 +6,13 @@ importers:\n     dependencies:\n       zod:\n         specifier: ^4.4.0\n-        version: 4.4.1\n+        version: 4.4.3\n \n packages:\n \n-  zod@4.4.1:\n-    resolution: {integrity: sha512-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn4Oo5Pp6Qq7Rr8Ss9Tt0Uu1Vv2Ww3Xx4Yy5Zz6Aa7Bb8Cc9Dd0==}\n+  zod@4.4.3:\n+    resolution: {integrity: sha512-Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss2Rr1Qq0Pp9Oo8Nn7Mm6Ll5Kk4Jj3Ii2Hh1Gg0Ff9Ee8Dd7Cc6Bb5Aa4Zz3Yy2Xx1Ww0==}\n \n snapshots:\n \n-  zod@4.4.1: {}\n+  zod@4.4.3: {}",
+      "baseContent": "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      zod:\n        specifier: ^4.4.0\n        version: 4.4.1\n\npackages:\n\n  zod@4.4.1:\n    resolution: {integrity: sha512-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn4Oo5Pp6Qq7Rr8Ss9Tt0Uu1Vv2Ww3Xx4Yy5Zz6Aa7Bb8Cc9Dd0==}\n\nsnapshots:\n\n  zod@4.4.1: {}\n",
+      "headContent": "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      zod:\n        specifier: ^4.4.0\n        version: 4.4.3\n\npackages:\n\n  zod@4.4.3:\n    resolution: {integrity: sha512-Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss2Rr1Qq0Pp9Oo8Nn7Mm6Ll5Kk4Jj3Ii2Hh1Gg0Ff9Ee8Dd7Cc6Bb5Aa4Zz3Yy2Xx1Ww0==}\n\nsnapshots:\n\n  zod@4.4.3: {}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "e61fc687389e54581040dd0fd6ccf2182e5556d1",
+      "message": "chore(deps): refresh the lockfile"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

@@ -1,0 +1,42 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 105,
+    "headSha": "5a922e4f05b9624b1f9941a7764446cda0396e0c"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/pricing/discount.ts#bulkDiscount",
+      "file": "src/pricing/discount.ts",
+      "name": "bulkDiscount",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "conditionChanged",
+      "refactorings": []
+    }
+  ],
+  "sentences": [
+    {
+      "id": "description:0",
+      "origin": "description",
+      "text": "Customers ordering 5 to 9 units never got the bulk discount, and support keeps getting tickets about it.",
+      "class": "problem",
+      "numbers": [
+        "5",
+        "9"
+      ]
+    },
+    {
+      "id": "description:1",
+      "origin": "description",
+      "text": "This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders."
+    },
+    {
+      "id": "commit:5a922e4f05b9624b1f9941a7764446cda0396e0c:0",
+      "origin": "commit:5a922e4f05b9624b1f9941a7764446cda0396e0c",
+      "text": "fix(pricing): apply the bulk discount from 5 units"
+    }
+  ],
+  "excluded": []
+}

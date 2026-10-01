@@ -1,0 +1,33 @@
+{
+  "action": "opened",
+  "number": 3469,
+  "installation": {
+    "id": 1
+  },
+  "repository": {
+    "full_name": "pmndrs/zustand",
+    "name": "zustand",
+    "owner": {
+      "login": "pmndrs"
+    }
+  },
+  "pull_request": {
+    "number": 3469,
+    "title": "fix(devtools): support Firefox/Safari stack format in findCallerName",
+    "user": {
+      "login": "SBolsec"
+    },
+    "head": {
+      "sha": "30ad99f59900a1ac9202ff566edb4062cd9a038c",
+      "ref": "fix/devtools-cross-browser-stack-inference"
+    },
+    "base": {
+      "sha": "4b96f4e3a53abdbb1419cacadddc9b1bd786dab3",
+      "ref": "main"
+    }
+  },
+  "sender": {
+    "login": "SBolsec",
+    "type": "User"
+  }
+}

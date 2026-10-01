@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 112,
+  "url": "https://github.com/acme/shop/pull/112",
+  "title": "refactor(cart): extract Cart._subtotal",
+  "body": "Cart.total mixed summing the items with applying the discount. This pulls the sum into its own _subtotal method so the discount rule reads on its own.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "refactor/cart-subtotal",
+  "baseSha": "883cd91a8c9b28cb796d8b1e0bab42c50855fc63",
+  "headSha": "b168f34d4c703d597ac6df2e9e07c1742fdd887d",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "shop/cart.py",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 1,
+      "patch": "@@ -3,7 +3,10 @@ class Cart:\n         self.items = items\n \n     def total(self):\n-        subtotal = sum(item.price * item.qty for item in self.items)\n+        subtotal = self._subtotal()\n         if subtotal > 100:\n             subtotal *= 0.95\n         return round(subtotal, 2)\n+\n+    def _subtotal(self):\n+        return sum(item.price * item.qty for item in self.items)",
+      "baseContent": "class Cart:\n    def __init__(self, items):\n        self.items = items\n\n    def total(self):\n        subtotal = sum(item.price * item.qty for item in self.items)\n        if subtotal > 100:\n            subtotal *= 0.95\n        return round(subtotal, 2)\n",
+      "headContent": "class Cart:\n    def __init__(self, items):\n        self.items = items\n\n    def total(self):\n        subtotal = self._subtotal()\n        if subtotal > 100:\n            subtotal *= 0.95\n        return round(subtotal, 2)\n\n    def _subtotal(self):\n        return sum(item.price * item.qty for item in self.items)\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "b168f34d4c703d597ac6df2e9e07c1742fdd887d",
+      "message": "refactor(cart): extract Cart._subtotal"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

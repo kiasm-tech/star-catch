@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 101,
+  "url": "https://github.com/acme/shop/pull/101",
+  "title": "style: re-indent formatPrice",
+  "body": "Re-indents formatPrice from four spaces to two so the file matches the Prettier config used everywhere else. Nothing else changes.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "style/format-price-indent",
+  "baseSha": "9325a695567246d70c4cdb6a25c64a9ce5701260",
+  "headSha": "be4f1fab42c91b2d2f2a9383992d9b721d77e109",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/lib/formatPrice.ts",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "patch": "@@ -1,4 +1,4 @@\n export function formatPrice(cents: number, currency = \"EUR\"): string {\n-    const amount = (cents / 100).toFixed(2);\n-    return `${amount} ${currency}`;\n+  const amount = (cents / 100).toFixed(2);\n+  return `${amount} ${currency}`;\n }",
+      "baseContent": "export function formatPrice(cents: number, currency = \"EUR\"): string {\n    const amount = (cents / 100).toFixed(2);\n    return `${amount} ${currency}`;\n}\n",
+      "headContent": "export function formatPrice(cents: number, currency = \"EUR\"): string {\n  const amount = (cents / 100).toFixed(2);\n  return `${amount} ${currency}`;\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "be4f1fab42c91b2d2f2a9383992d9b721d77e109",
+      "message": "style: re-indent formatPrice to two spaces"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

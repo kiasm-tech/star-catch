@@ -1,0 +1,55 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 113,
+    "headSha": "a7921a34857f4871e5ac0f5bcc4ad8f9de1d9672"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/main/java/com/acme/shop/OrderService.java#OrderService.total",
+      "file": "src/main/java/com/acme/shop/OrderService.java",
+      "name": "OrderService.total",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "extract"
+      ]
+    },
+    {
+      "id": "src/main/java/com/acme/shop/OrderService.java#OrderService.subtotal",
+      "file": "src/main/java/com/acme/shop/OrderService.java",
+      "name": "OrderService.subtotal",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "added",
+      "refactorings": [
+        "extract"
+      ]
+    },
+    {
+      "id": "src/main/java/com/acme/shop/OrderService.java#OrderService.receipt",
+      "file": "src/main/java/com/acme/shop/OrderService.java",
+      "name": "OrderService.receipt",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "move"
+      ]
+    },
+    {
+      "id": "src/main/java/com/acme/shop/Money.java#Money.formatCents",
+      "file": "src/main/java/com/acme/shop/Money.java",
+      "name": "Money.formatCents",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "moved",
+      "refactorings": [
+        "move"
+      ]
+    }
+  ],
+  "excluded": []
+}

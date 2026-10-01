@@ -1,0 +1,26 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 107,
+    "headSha": "59a88a597936cbb4f75c1a5c8bade8d3119ba55c"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "db/migrations/20260930120000_add_gift_note_to_orders.sql#orders.gift_note",
+      "file": "db/migrations/20260930120000_add_gift_note_to_orders.sql",
+      "name": "orders.gift_note",
+      "unitKind": "schemaEntity",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": [],
+      "labels": {
+        "kind": "data",
+        "risks": [
+          "dataMigration"
+        ]
+      }
+    }
+  ],
+  "excluded": []
+}

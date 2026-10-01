@@ -1,0 +1,33 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 112,
+    "headSha": "b168f34d4c703d597ac6df2e9e07c1742fdd887d"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "shop/cart.py#Cart.total",
+      "file": "shop/cart.py",
+      "name": "Cart.total",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "bodyChanged",
+      "refactorings": [
+        "extract"
+      ]
+    },
+    {
+      "id": "shop/cart.py#Cart._subtotal",
+      "file": "shop/cart.py",
+      "name": "Cart._subtotal",
+      "unitKind": "declaration",
+      "verdict": "structural",
+      "changeType": "added",
+      "refactorings": [
+        "extract"
+      ]
+    }
+  ],
+  "excluded": []
+}

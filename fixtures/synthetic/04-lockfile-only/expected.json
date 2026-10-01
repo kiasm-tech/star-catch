@@ -1,0 +1,15 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 104,
+    "headSha": "e61fc687389e54581040dd0fd6ccf2182e5556d1"
+  },
+  "truncated": false,
+  "units": [],
+  "excluded": [
+    {
+      "file": "pnpm-lock.yaml",
+      "reason": "lockfile"
+    }
+  ]
+}

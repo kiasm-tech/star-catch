@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 103,
+  "url": "https://github.com/acme/shop/pull/103",
+  "title": "refactor(cart): rename lineTotal to itemTotal",
+  "body": "The helper that prices one cart item was called lineTotal, which kept getting confused with the receipt lines. This renames it to itemTotal and updates its two callers.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "refactor/item-total-name",
+  "baseSha": "0a3d34a7365596559525e6db49f540b5fddd3ef1",
+  "headSha": "54beed305f6558085d404831a15cfa65bf0a5d22",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/cart/totals.ts",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 3,
+      "patch": "@@ -1,13 +1,13 @@\n type CartItem = { name: string; qty: number; unitPrice: number };\n \n-function lineTotal(item: CartItem): number {\n+function itemTotal(item: CartItem): number {\n   return item.qty * item.unitPrice;\n }\n \n export function cartTotal(items: CartItem[]): number {\n-  return items.reduce((sum, item) => sum + lineTotal(item), 0);\n+  return items.reduce((sum, item) => sum + itemTotal(item), 0);\n }\n \n export function formatLine(item: CartItem): string {\n-  return `${item.qty} x ${item.name}: ${lineTotal(item)}`;\n+  return `${item.qty} x ${item.name}: ${itemTotal(item)}`;\n }",
+      "baseContent": "type CartItem = { name: string; qty: number; unitPrice: number };\n\nfunction lineTotal(item: CartItem): number {\n  return item.qty * item.unitPrice;\n}\n\nexport function cartTotal(items: CartItem[]): number {\n  return items.reduce((sum, item) => sum + lineTotal(item), 0);\n}\n\nexport function formatLine(item: CartItem): string {\n  return `${item.qty} x ${item.name}: ${lineTotal(item)}`;\n}\n",
+      "headContent": "type CartItem = { name: string; qty: number; unitPrice: number };\n\nfunction itemTotal(item: CartItem): number {\n  return item.qty * item.unitPrice;\n}\n\nexport function cartTotal(items: CartItem[]): number {\n  return items.reduce((sum, item) => sum + itemTotal(item), 0);\n}\n\nexport function formatLine(item: CartItem): string {\n  return `${item.qty} x ${item.name}: ${itemTotal(item)}`;\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "54beed305f6558085d404831a15cfa65bf0a5d22",
+      "message": "refactor(cart): rename lineTotal to itemTotal"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

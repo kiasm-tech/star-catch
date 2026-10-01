@@ -1,0 +1,38 @@
+{
+  "fullName": "acme/shop",
+  "number": 107,
+  "url": "https://github.com/acme/shop/pull/107",
+  "title": "feat(orders): store a gift note per order",
+  "body": "Customers asked to add a short message when an order is a gift. This migration adds a nullable gift_note column to orders; the checkout form will use it in a follow-up.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "feat/order-gift-note",
+  "baseSha": "7a6475fe589809282ef17470bb562e2204f7ddb7",
+  "headSha": "59a88a597936cbb4f75c1a5c8bade8d3119ba55c",
+  "createdAt": "2026-09-30T09:00:00Z",
+  "updatedAt": "2026-09-30T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-09-30T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "db/migrations/20260930120000_add_gift_note_to_orders.sql",
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1 @@\n+ALTER TABLE orders ADD COLUMN gift_note TEXT;",
+      "headContent": "ALTER TABLE orders ADD COLUMN gift_note TEXT;\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "59a88a597936cbb4f75c1a5c8bade8d3119ba55c",
+      "message": "feat(orders): add the gift_note column"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}
