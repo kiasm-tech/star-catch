@@ -1,0 +1,14 @@
+{
+  "name": "@star-catch/cli",
+  "private": true,
+  "description": "Command line entry point and composition root for offline runs.",
+  "type": "module",
+  "dependencies": {
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "@star-catch/adapters": "workspace:*",
+    "@star-catch/pipeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@star-catch/testkit": "workspace:*"
+  }
+}
