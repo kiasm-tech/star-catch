@@ -1,7 +1,7 @@
 {
   "name": "@star-catch/adapters",
   "private": true,
-  "description": "Driven adapters: implementations of the core's ports (GitHub, the file system).",
+  "description": "Driven adapters: implementations of the core's ports (GitHub, the file system, Postgres).",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -9,9 +9,12 @@
   "dependencies": {
     "@kiasm-tech/star-catch-contracts": "workspace:*",
     "@octokit/rest": "^22.0.1",
-    "@star-catch/pipeline": "workspace:*"
+    "@star-catch/pipeline": "workspace:*",
+    "kysely": "^0.29.6",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
-    "@star-catch/testkit": "workspace:*"
+    "@star-catch/testkit": "workspace:*",
+    "@types/pg": "^8.23.1"
   }
 }

@@ -2,3 +2,5 @@ export { isMock, type MockableService } from "./config.js";
 export { FileFixtureStore } from "./fixtures/file-fixture-store.js";
 export { GitHubPullRequestSource } from "./github/pull-request-source.real.js";
 export { RecordedPullRequestSource } from "./github/pull-request-source.mock.js";
+export { connect, type StarCatchDb } from "./db/database.js";
+export { MIGRATIONS_DIR, migrate } from "./db/migrate.js";
