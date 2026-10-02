@@ -1,7 +1,7 @@
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { FIXTURES_DIR } from "@star-catch/testkit";
+import { FIXTURES_DIR, freshDatabase } from "@star-catch/testkit";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Io } from "./io.js";
 import { run } from "./run.js";
@@ -65,4 +65,23 @@ describe("cli record", () => {
       expect(err.length).toBeGreaterThan(0);
     },
   );
+});
+
+describe("cli migrate", () => {
+  it("applies the migrations once", async () => {
+    const database = await freshDatabase();
+    try {
+      const env = { ...mockEnv(), DATABASE_URL: database.url };
+      expect(await run(["migrate"], env, io)).toBe(0);
+      expect(await run(["migrate"], env, io)).toBe(0);
+      expect(out).toEqual(["applied  0001_star_catch.sql", "up to date"]);
+    } finally {
+      await database.drop();
+    }
+  });
+
+  it("asks for DATABASE_URL", async () => {
+    expect(await run(["migrate"], mockEnv(), io)).toBe(2);
+    expect(err[0]).toMatch(/DATABASE_URL/);
+  });
 });
