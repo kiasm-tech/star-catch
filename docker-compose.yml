@@ -1,4 +1,12 @@
 # Local services. Tests start their own Postgres (testcontainers) and don't need this.
+# `docker compose up -d` starts Postgres; `--profile app` adds the backend built from this repo.
+x-backend: &backend
+  image: star-catch:local
+  build: .
+  profiles: [app]
+  environment: &env
+    DATABASE_URL: postgres://star_catch:star_catch@postgres:5432/star_catch
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -15,6 +23,42 @@ services:
       interval: 2s
       timeout: 2s
       retries: 15
+
+  migrate:
+    <<: *backend
+    command: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  intake:
+    <<: *backend
+    command: intake
+    environment:
+      <<: *env
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-dev}
+    ports:
+      - "${STAR_CATCH_INTAKE_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Recorded snapshots instead of GitHub: replay fixtures/webhooks/* to drive it.
+  worker:
+    <<: *backend
+    command: [worker, --watch]
+    environment:
+      <<: *env
+      STAR_CATCH_MOCK_GITHUB: "true"
+      STAR_CATCH_REPOS: pmndrs/zustand
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres:

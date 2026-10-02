@@ -15,6 +15,9 @@
     "worker": "tsx apps/worker/src/main.ts",
     "replay": "tsx apps/cli/src/main.ts replay"
   },
+  "dependencies": {
+    "tsx": "^4.23.5"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@star-catch/adapters": "workspace:*",
@@ -22,7 +25,6 @@
     "@types/node": "^26.0.1",
     "eslint": "^9.39.4",
     "globals": "^16.4.0",
-    "tsx": "^4.23.5",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.0",
     "vitest": "^4.1.10"
