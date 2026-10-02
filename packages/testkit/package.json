@@ -1,12 +1,17 @@
 {
   "name": "@star-catch/testkit",
   "private": true,
-  "description": "Test helpers: builders, the context matcher, the fixture loader. Only ever a devDependency.",
+  "description": "Test helpers: builders, the context matcher, the fixture loader, a Postgres per run. Only ever a devDependency.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@kiasm-tech/star-catch-contracts": "workspace:*"
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "@testcontainers/postgresql": "^12.2.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
   }
 }
