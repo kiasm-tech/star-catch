@@ -2,6 +2,7 @@ export type { PullRequestRef, PullRequestSource } from "./ports/pull-request-sou
 export type { DeliveryStatus, DeliveryStore, WebhookDelivery } from "./ports/delivery-store.js";
 export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
+export type { RepoSettings } from "./ports/repo-settings.js";
 export {
   CRUX_GITHUB_EVENT_QUEUE,
   INGEST_QUEUE,
@@ -29,3 +30,4 @@ export { recordPullRequests, type RecordedPullRequest } from "./usecases/record-
 export { checkFixtures, type FixtureCheck } from "./usecases/check-fixtures.js";
 export { routeDelivery, type Route } from "./webhooks/route.js";
 export { receiveWebhook, type IncomingWebhook, type WebhookOutcome } from "./webhooks/receive-webhook.js";
+export { ingestPullRequest, type IngestDeps, type IngestOutcome } from "./usecases/ingest-pull-request.js";
