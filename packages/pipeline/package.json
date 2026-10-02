@@ -1,0 +1,16 @@
+{
+  "name": "@star-catch/pipeline",
+  "private": true,
+  "description": "The application core: use cases and the ports they need. No I/O.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@star-catch/testkit": "workspace:*"
+  }
+}
