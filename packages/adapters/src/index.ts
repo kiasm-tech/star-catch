@@ -4,3 +4,5 @@ export { GitHubPullRequestSource } from "./github/pull-request-source.real.js";
 export { RecordedPullRequestSource } from "./github/pull-request-source.mock.js";
 export { connect, type StarCatchDb } from "./db/database.js";
 export { MIGRATIONS_DIR, migrate } from "./db/migrate.js";
+export { PostgresDeliveryStore } from "./db/delivery-store.postgres.js";
+export { PostgresSnapshotStore } from "./db/snapshot-store.postgres.js";
