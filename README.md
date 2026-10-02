@@ -15,14 +15,12 @@ pnpm cli fixtures                                         # check every fixture
 GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
 ```
 
-Layout and rules: [docs/backend.md](docs/backend.md) §3.
+Dependency rules: [test/architecture.test.ts](test/architecture.test.ts), mirrored in ESLint.
 
 ## Docs
 
 | Doc | Read it for |
 | --- | --- |
-| [docs/backend.md](docs/backend.md) | Services, queues, data, the contract with Crux |
 | [docs/diagrams/infrastructure.svg](docs/diagrams/infrastructure.svg) | What runs where |
-| [docs/changes.md](docs/changes.md) | How change units are computed and classified |
 | [docs/pr-analysis.md](docs/pr-analysis.md) | The context: units, labels, facts |
 | [docs/spec-update-structure.md](docs/spec-update-structure.md) | How an update is built from the context |
