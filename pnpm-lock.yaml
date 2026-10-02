@@ -49,6 +49,25 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testkit
 
+  apps/intake:
+    dependencies:
+      '@kiasm-tech/star-catch-contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@star-catch/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@star-catch/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
+      hono:
+        specifier: ^4.13.12
+        version: 4.13.12
+    devDependencies:
+      '@star-catch/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+
   packages/adapters:
     dependencies:
       '@kiasm-tech/star-catch-contracts':
@@ -1117,6 +1136,10 @@ packages:
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
+
+  hono@4.13.12:
+    resolution: {integrity: sha512-6E2QDAc9Ick9Sq77ZrGS/dk2WUYni91aufTw6LJKpV7w8kW5/GxVUc650FOADOmlwg3K+f7Pun6XlV+pYmW6gw==}
+    engines: {node: '>=16.9.0'}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -2843,6 +2866,8 @@ snapshots:
   graceful-fs@4.2.11: {}
 
   has-flag@4.0.0: {}
+
+  hono@4.13.12: {}
 
   ieee754@1.2.1: {}
 
