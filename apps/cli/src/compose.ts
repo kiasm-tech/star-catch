@@ -19,6 +19,7 @@ export interface Services {
   pullRequests(): PullRequestSource;
   /** A new connection pool; the caller destroys it. */
   database(): StarCatchDb;
+  webhookSecret(): string;
 }
 
 /** The composition root: the only place that picks adapters. */
@@ -36,6 +37,10 @@ export function compose(env: Env): Services {
     database() {
       if (!env.DATABASE_URL) throw new UsageError("Set DATABASE_URL, e.g. postgres://star_catch:star_catch@localhost:5432/star_catch");
       return connect(env.DATABASE_URL);
+    },
+    webhookSecret() {
+      if (!env.GITHUB_WEBHOOK_SECRET) throw new UsageError("Set GITHUB_WEBHOOK_SECRET to the secret the intake checks");
+      return env.GITHUB_WEBHOOK_SECRET;
     },
   };
 }

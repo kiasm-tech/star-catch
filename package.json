@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "cli": "tsx apps/cli/src/main.ts",
     "intake": "tsx apps/intake/src/main.ts",
-    "worker": "tsx apps/worker/src/main.ts"
+    "worker": "tsx apps/worker/src/main.ts",
+    "replay": "tsx apps/cli/src/main.ts replay"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
