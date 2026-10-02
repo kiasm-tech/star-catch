@@ -1,0 +1,20 @@
+# Local services. Tests start their own Postgres (testcontainers) and don't need this.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: star_catch
+      POSTGRES_PASSWORD: star_catch
+      POSTGRES_DB: star_catch
+    ports:
+      - "${STAR_CATCH_PG_PORT:-5432}:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "star_catch"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+volumes:
+  postgres:
