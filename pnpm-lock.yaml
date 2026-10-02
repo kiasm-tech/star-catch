@@ -11,6 +11,12 @@ importers:
       '@eslint/js':
         specifier: ^9.39.0
         version: 9.39.5
+      '@star-catch/adapters':
+        specifier: workspace:*
+        version: link:packages/adapters
+      '@star-catch/testkit':
+        specifier: workspace:*
+        version: link:packages/testkit
       '@types/node':
         specifier: ^26.0.1
         version: 26.6.3
