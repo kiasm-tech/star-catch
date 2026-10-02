@@ -1,5 +1,5 @@
 export type { PullRequestRef, PullRequestSource } from "./ports/pull-request-source.js";
-export type { DeliveryStore, WebhookDelivery } from "./ports/delivery-store.js";
+export type { DeliveryStatus, DeliveryStore, WebhookDelivery } from "./ports/delivery-store.js";
 export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
 export {
