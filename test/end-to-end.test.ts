@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { PostgresSnapshotStore, connect, migrate, type StarCatchDb } from "@star-catch/adapters";
+import { connect, migrate, PostgresSnapshotStore, sign, type StarCatchDb } from "@star-catch/adapters";
 import { FIXTURES_DIR, freshDatabase, loadRecordedSnapshots, type TestDatabase } from "@star-catch/testkit";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compose as composeIntake, type Intake } from "../apps/intake/src/compose.js";
-import { sign } from "../apps/intake/src/signature.js";
 import { compose as composeWorker, type Worker } from "../apps/worker/src/compose.js";
 import { runWorker } from "../apps/worker/src/run.js";
 

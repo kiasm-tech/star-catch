@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sign, verifySignature } from "./signature.js";
+import { sign, verifySignature } from "./webhook-signature.js";
 
 const body = new TextEncoder().encode('{"action":"opened"}');
 
