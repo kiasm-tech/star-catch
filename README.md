@@ -11,6 +11,8 @@ This repository is the backend: it receives GitHub's webhooks, analyses pull req
 ```sh
 pnpm install
 pnpm test && pnpm typecheck && pnpm lint
+pnpm cli fixtures                                         # check every fixture
+GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
 ```
 
 Layout and rules: [docs/backend.md](docs/backend.md) §3.

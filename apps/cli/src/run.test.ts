@@ -1,0 +1,68 @@
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { FIXTURES_DIR } from "@star-catch/testkit";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Io } from "./io.js";
+import { run } from "./run.js";
+
+let dir: string;
+let out: string[];
+let err: string[];
+const io: Io = { out: (l) => void out.push(l), err: (l) => void err.push(l) };
+const mockEnv = () => ({ STAR_CATCH_MOCK: "true", STAR_CATCH_FIXTURES_DIR: dir });
+
+beforeEach(async () => {
+  dir = await mkdtemp(path.join(tmpdir(), "cli-"));
+  await cp(FIXTURES_DIR, dir, { recursive: true });
+  out = [];
+  err = [];
+});
+afterEach(async () => {
+  await rm(dir, { recursive: true, force: true });
+});
+
+describe("cli fixtures", () => {
+  it("passes on the repository's fixtures", async () => {
+    expect(await run(["fixtures"], mockEnv(), io)).toBe(0);
+    expect(out.at(-1)).toMatch(/^(\d+)\/\1 fixtures ok$/);
+    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(13);
+  });
+
+  it("fails and names the fixture when a patch is wrong", async () => {
+    const file = path.join(dir, "synthetic", "05-condition-change", "snapshot.json");
+    const snapshot = JSON.parse(await readFile(file, "utf8"));
+    snapshot.files[0].headContent += "// edited\n";
+    await writeFile(file, JSON.stringify(snapshot));
+
+    expect(await run(["fixtures"], mockEnv(), io)).toBe(1);
+    expect(out).toContain("FAIL  synthetic/05-condition-change");
+  });
+});
+
+describe("cli record", () => {
+  it("records a pull request from the mock source exactly as it was recorded", async () => {
+    const snapshotFile = path.join(dir, "snapshots", "pmndrs__zustand__3469.json");
+    const webhookFile = path.join(dir, "webhooks", "pmndrs__zustand__3469.opened.json");
+    const [snapshotBefore, webhookBefore] = await Promise.all([readFile(snapshotFile, "utf8"), readFile(webhookFile, "utf8")]);
+
+    expect(await run(["record", "pmndrs/zustand", "3469"], mockEnv(), io)).toBe(0);
+    expect(out).toEqual(["pmndrs__zustand__3469: 2 files, 4 commits"]);
+    expect(await readFile(snapshotFile, "utf8")).toBe(snapshotBefore);
+    expect(await readFile(webhookFile, "utf8")).toBe(webhookBefore);
+  });
+
+  it("asks for a token before calling GitHub", async () => {
+    const env = { STAR_CATCH_MOCK: "false", STAR_CATCH_FIXTURES_DIR: dir };
+    expect(await run(["record", "pmndrs/zustand", "1"], env, io)).toBe(2);
+    expect(err[0]).toMatch(/GITHUB_TOKEN/);
+  });
+
+  it.each([[["record"]], [["record", "zustand", "1"]], [["record", "pmndrs/zustand", "x"]], [["nope"]], [[]]])(
+    "rejects %j with a usage error",
+    async (argv) => {
+      expect(await run(argv, mockEnv(), io)).toBe(2);
+      expect(err.length).toBeGreaterThan(0);
+    },
+  );
+});

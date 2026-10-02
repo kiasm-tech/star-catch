@@ -22,4 +22,5 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm cli fixtures
       - run: pnpm --filter @kiasm-tech/star-catch-contracts build

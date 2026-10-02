@@ -16,6 +16,7 @@ const ALLOWED: Record<string, string[]> = {
   [TESTKIT]: [CONTRACTS],
   [PIPELINE]: [CONTRACTS],
   [ADAPTERS]: [CONTRACTS, PIPELINE],
+  "@star-catch/cli": [CONTRACTS, PIPELINE, ADAPTERS],
 };
 
 /** Packages that must stay free of I/O, and the only modules they may import. */
