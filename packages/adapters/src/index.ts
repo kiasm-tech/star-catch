@@ -6,3 +6,4 @@ export { connect, type StarCatchDb } from "./db/database.js";
 export { MIGRATIONS_DIR, migrate } from "./db/migrate.js";
 export { PostgresDeliveryStore } from "./db/delivery-store.postgres.js";
 export { PostgresSnapshotStore } from "./db/snapshot-store.postgres.js";
+export { PgBossJobQueue } from "./queue/job-queue.pgboss.js";

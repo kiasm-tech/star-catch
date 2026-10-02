@@ -1,7 +1,7 @@
 {
   "name": "@star-catch/adapters",
   "private": true,
-  "description": "Driven adapters: implementations of the core's ports (GitHub, the file system, Postgres).",
+  "description": "Driven adapters: implementations of the core's ports (GitHub, the file system, Postgres, pg-boss).",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -11,7 +11,8 @@
     "@octokit/rest": "^22.0.1",
     "@star-catch/pipeline": "workspace:*",
     "kysely": "^0.29.6",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "pg-boss": "^12.36.0"
   },
   "devDependencies": {
     "@star-catch/testkit": "workspace:*",
