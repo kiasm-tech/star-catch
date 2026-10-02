@@ -62,7 +62,7 @@ Two lanes start from the same snapshot and meet in the context.
 | **1 · Collect** | Snapshot the PR at its head commit: metadata, diff, full base and head content of changed files, commits, description, linked issues, review comments, CI. Immutable, keyed by head SHA | GitHub API |
 | **2 · Triage files** | Rules give each file a class: source, test, configuration, schema/migration, documentation, build & CI, dependency manifest, lockfile, generated, vendored, binary. The last four leave here. A dependency *manifest* stays — adding a dependency is a change; lockfile churn isn't | `.gitattributes` (`linguist-generated`, `linguist-vendored`), `@generated` headers, known paths |
 | **3 · Parse base and head** | Code through tree-sitter (TypeScript, JavaScript, Python and Java first); structured files by key, statement or section. A file that won't parse, or takes too long, falls back to a line diff, whole file as one unit | tree-sitter |
-| **4 · Pair and detect refactorings** | Declarations pair by name; a token diff runs inside the ones that changed. Renames, moves, extractions and inlines are found from token hashes over the added, removed and changed declarations | [changes.md](changes.md) §3.5 |
+| **4 · Pair and detect refactorings** | Declarations pair by name; a token diff runs inside the ones that changed. Renames, moves, extractions and inlines are found from token hashes over the added, removed and changed declarations | Token hashes |
 | **5 · Build change units** | Each changed declaration, key, statement or section is a unit; edits outside every declaration make a file unit. Each unit gets a **change type** from where its edits sit: added, removed, signature changed, condition changed, body changed, moved | ChangeDistiller's change-type taxonomy |
 | **6 · Is it a change?** | A verdict per unit, as in §1 | — |
 | **7 · Classify each unit** | One unit at a time: one label per axis plus a confidence (§3) | The classifier slot (§4) |
@@ -73,9 +73,9 @@ Two lanes start from the same snapshot and meet in the context.
 
 ### Where it runs
 
-Steps 2–8 run in the backend's worker, in process ([changes.md](changes.md)): milliseconds per pull
+Steps 2–8 run in the backend's worker, in process: milliseconds per pull
 request, no separate service. A file that can't be parsed within its budget falls back to a line
-diff and marks the context **degraded**. The services around it: [backend.md](backend.md).
+diff and marks the context **degraded**.
 
 | Language | Units | Refactorings |
 |---|---|---|
