@@ -71,6 +71,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testkit
 
+  apps/worker:
+    dependencies:
+      '@kiasm-tech/star-catch-contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@star-catch/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@star-catch/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
+    devDependencies:
+      '@star-catch/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+
   packages/adapters:
     dependencies:
       '@kiasm-tech/star-catch-contracts':
