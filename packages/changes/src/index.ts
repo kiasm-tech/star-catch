@@ -14,3 +14,4 @@ export {
   type FileClass,
   type Unit,
 } from "./schema.js";
+export { toAnalyzeInput } from "./input.js";
