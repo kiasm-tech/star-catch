@@ -30,6 +30,11 @@ const PURE: Record<string, string[]> = {
   "packages/pipeline": ["zod", CONTRACTS],
 };
 
+/** Single files of a pure package that may also import these. */
+const PURE_EXCEPTIONS: Record<string, string[]> = {
+  "packages/changes/src/languages/grammar-files.ts": ["node:fs/promises"],
+};
+
 interface Manifest {
   name: string;
   dependencies?: Record<string, string>;
@@ -76,6 +81,7 @@ describe("architecture", () => {
       const specifiers = [...text.matchAll(/(?:from|import)\s+"([^"]+)"/g)].map((m) => m[1] ?? "");
       return specifiers
         .filter((s) => !s.startsWith(".") && !allowed.includes(s))
+        .filter((s) => !PURE_EXCEPTIONS[path.relative(root, file)]?.includes(s))
         .map((s) => `${path.relative(root, file)} imports ${s}`);
     });
     expect(offending).toEqual([]);

@@ -41,6 +41,16 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/changes/src/languages/grammar-files.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        // A gitignore-style negation can't re-allow node:fs/promises under node:*, hence the regex.
+        { patterns: [{ regex: "^(node:(?!crypto$|fs/promises$).*|fs(/.*)?|path|os|child_process|@octokit/.*)$", message: io.message }] },
+      ],
+    },
+  },
+  {
     files: ["packages/pipeline/src/**/*.ts"],
     ignores: ["**/*.test.ts"],
     rules: {
