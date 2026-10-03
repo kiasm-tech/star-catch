@@ -1,6 +1,8 @@
 import { REFACTORINGS, type Refactoring } from "@kiasm-tech/star-catch-contracts";
 import type { ChangeSet, Unit } from "../schema.js";
+import type { Body } from "./bodies.js";
 import type { UnitTokens } from "./compare.js";
+import { diffTokens } from "./diff.js";
 import type { Token } from "./tokens.js";
 
 /** A unit with its own tokens, when it came from the code engine. */
@@ -39,8 +41,8 @@ function keyOf(tokens: Token[], simple: string): string {
 const sorted = (types: Iterable<Refactoring>) => REFACTORINGS.filter((r) => new Set(types).has(r));
 
 /**
- * Renames, moves and their callers (changes.md §3.5, §5.5), in that order. Extract, inline and local
- * renames come later. Only exact matches count: anything unproven stays behavioural.
+ * Renames, moves and their callers, extracts and inlines, then local renames (changes.md §3.5, §5.5),
+ * in that order. Only exact matches count: anything unproven stays behavioural.
  */
 export function explainRefactorings(candidates: Candidate[]): Explained {
   const replaced = new Map<Unit, Unit | null>();
@@ -109,6 +111,41 @@ export function explainRefactorings(candidates: Candidate[]): Explained {
     replaced.set(c.unit, { ...c.unit, verdict: "structural", refactorings: sorted(types) });
   }
 
+  // 3. Extract and inline: a new function's body replaces statements of a changed one, or the reverse.
+  const open = (c: Candidate) => !replaced.has(c.unit);
+  for (const kind of ["extract", "inline"] as const) {
+    const side = kind === "extract" ? "added" : "removed";
+    for (const fn of candidates) {
+      if (!open(fn) || fn.unit.unitKind !== "declaration" || fn.unit.changeType !== side) continue;
+      const body = kind === "extract" ? fn.tokens?.headBody : fn.tokens?.baseBody;
+      if (!body) continue;
+      const simple = nameParts(fn.unit.name).simple;
+      const sources = candidates.filter((s) => {
+        if (s === fn || s.family !== fn.family || !changed(s) || !s.tokens!.baseBody || !s.tokens!.headBody) return false;
+        const diff = statementDiff(s.tokens!.baseBody, s.tokens!.headBody);
+        if (!diff) return false;
+        return replaces(kind === "extract" ? diff : { removed: diff.added, added: diff.removed }, body, simple);
+      });
+      if (sources.length === 0) continue;
+      replaced.set(fn.unit, { ...fn.unit, verdict: "structural", refactorings: [kind] });
+      for (const s of sources) replaced.set(s.unit, { ...s.unit, verdict: "structural", refactorings: [kind] });
+      const names = sources.map((s) => s.unit.name).join(", ");
+      const description = kind === "extract" ? `${fn.unit.name} extracted from ${names}` : `${fn.unit.name} inlined into ${names}`;
+      refactorings.push({ type: kind, description, unitIds: [fn.unit.id, ...sources.map((s) => s.unit.id)] });
+    }
+  }
+
+  // 4. Local renames: the only edits swap names the unit binds itself (parameters, locals), one to one.
+  for (const c of candidates) {
+    if (!changed(c)) continue;
+    const swaps = localRenames(c.tokens!.base!, c.tokens!.head!);
+    const bound = (from: string, to: string) => c.tokens!.baseBindings?.has(from) && c.tokens!.headBindings?.has(to);
+    if (!swaps || ![...swaps].every(([from, to]) => bound(from, to))) continue;
+    replaced.set(c.unit, { ...c.unit, verdict: "structural", refactorings: ["rename"] });
+    const list = [...swaps].map(([from, to]) => `${from} renamed to ${to}`).join(", ");
+    refactorings.push({ type: "rename", description: `${list} in ${c.unit.name}`, unitIds: [c.unit.id] });
+  }
+
   const units = candidates.flatMap(({ unit }) => {
     const next = replaced.get(unit);
     return next === null ? [] : [next ?? unit];
@@ -143,4 +180,86 @@ function dropQualifiers(tokens: Token[], moves: Map<string, unknown>, used: Set<
     texts.push(tokens[i].text);
   }
   return texts;
+}
+
+const statementKey = (statement: string[]) => statement.join("\0");
+
+/** The statements a changed body lost and gained, from a diff over whole statements. */
+function statementDiff(base: Body, head: Body): { removed: string[][]; added: string[][] } | null {
+  const diff = diffTokens(base.statements.map(statementKey), head.statements.map(statementKey));
+  if (!diff) return null;
+  return { removed: diff.deleted.map((i) => base.statements[i]), added: diff.inserted.map((i) => head.statements[i]) };
+}
+
+/**
+ * Whether `fn` was extracted from the changed body (changes.md §3.5): (1) its statements, but for a
+ * trailing `return`, are among the removed ones; (2) every added statement calls it; (3) every other
+ * removed statement equals an added one once the call is replaced by what `fn` returns. Inline is
+ * the same with removed and added swapped.
+ */
+function replaces(changed: { removed: string[][]; added: string[][] }, fn: Body, name: string): boolean {
+  if (changed.removed.length === 0 || changed.added.length === 0) return false;
+  const own = fn.returned ? fn.statements.slice(0, -1) : fn.statements;
+  const leftovers = [...changed.removed];
+  for (const statement of own) {
+    const at = leftovers.findIndex((s) => statementKey(s) === statementKey(statement));
+    if (at < 0) return false;
+    leftovers.splice(at, 1);
+  }
+  if (!changed.added.every((s) => callAt(s, name, 0) !== null)) return false;
+  if (leftovers.length === 0) return true;
+  if (!fn.returned) return false;
+  const expanded = new Set(changed.added.map((s) => statementKey(replaceCalls(s, name, fn.returned!))));
+  return leftovers.every((s) => expanded.has(statementKey(s)));
+}
+
+const RECEIVERS = new Set(["this", "self"]);
+
+/** The span of the next call to `name` from `from`, `this.` / `self.` included; null without one. */
+function callAt(tokens: string[], name: string, from: number): { start: number; end: number } | null {
+  for (let i = from; i < tokens.length - 1; i++) {
+    if (tokens[i] !== name || tokens[i + 1] !== "(") continue;
+    const qualified = i >= 2 && QUALIFIER_SEPARATORS.has(tokens[i - 1]) && RECEIVERS.has(tokens[i - 2]);
+    let depth = 0;
+    for (let j = i + 1; j < tokens.length; j++) {
+      if (tokens[j] === "(") depth++;
+      else if (tokens[j] === ")" && --depth === 0) return { start: qualified ? i - 2 : i, end: j + 1 };
+    }
+    return null;
+  }
+  return null;
+}
+
+/** Every call to `name` replaced by `returned`. */
+function replaceCalls(tokens: string[], name: string, returned: string[]): string[] {
+  const out: string[] = [];
+  let at = 0;
+  for (let call = callAt(tokens, name, 0); call; call = callAt(tokens, name, at)) {
+    out.push(...tokens.slice(at, call.start), ...returned);
+    at = call.end;
+  }
+  return [...out, ...tokens.slice(at)];
+}
+
+/**
+ * The identifier swaps when they are the only edits and map one to one; null otherwise. Identifiers
+ * that stay the same count as mappings too, so `a + b` → `a + a` merges two names and isn't a rename.
+ */
+function localRenames(base: Token[], head: Token[]): Map<string, string> | null {
+  if (base.length !== head.length) return null;
+  const forward = new Map<string, string>();
+  const backward = new Map<string, string>();
+  for (let i = 0; i < base.length; i++) {
+    const from = base[i];
+    const to = head[i];
+    if (!isIdentifier(from) || !isIdentifier(to)) {
+      if (from.text !== to.text) return null;
+      continue;
+    }
+    if ((forward.get(from.text) ?? to.text) !== to.text || (backward.get(to.text) ?? from.text) !== from.text) return null;
+    forward.set(from.text, to.text);
+    backward.set(to.text, from.text);
+  }
+  const swaps = new Map([...forward].filter(([from, to]) => from !== to));
+  return swaps.size > 0 ? swaps : null;
 }

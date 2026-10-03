@@ -120,3 +120,85 @@ describe("moves", () => {
     expect(result.units).toEqual(["A.go structural signatureChanged [rename]", "B.run behavioural added"]);
   });
 });
+
+describe("extract", () => {
+  const before = `export function receipt(o: Order) {
+  const lines = o.items.map(String);
+  const subtotal = o.items.reduce(add, 0);
+  const tax = subtotal * 0.2;
+  lines.push(\`Total: \${subtotal + tax}\`);
+  return lines;
+}
+`;
+  const total = (body = "  const subtotal = o.items.reduce(add, 0);\n  const tax = subtotal * 0.2;\n  return subtotal + tax;\n") =>
+    `export function total(o: Order) {\n${body}}\n`;
+  const after = (push = "lines.push(`Total: ${total(o)}`);") =>
+    `export function receipt(o: Order) {\n  const lines = o.items.map(String);\n  ${push}\n  return lines;\n}\n`;
+
+  it("pairs a helper with the function its statements came from", async () => {
+    expect(await summary(modified("src/r.ts", before, total() + after()))).toEqual({
+      units: ["total structural added [extract]", "receipt structural bodyChanged [extract]"],
+      refactorings: ["extract: total extracted from receipt → total, receipt"],
+    });
+  });
+
+  it("follows the call through this. and self.", async () => {
+    const base = "class Cart:\n    def total(self):\n        s = sum(self.items)\n        return round(s, 2)\n";
+    const head = "class Cart:\n    def total(self):\n        s = self._sum()\n        return round(s, 2)\n\n    def _sum(self):\n        return sum(self.items)\n";
+    expect((await summary(modified("shop/cart.py", base, head))).units).toEqual([
+      "Cart.total structural bodyChanged [extract]",
+      "Cart._sum structural added [extract]",
+    ]);
+  });
+
+  it.each([
+    ["the helper's body wasn't removed from it", total("  const subtotal = o.items.reduce(add, 1);\n  const tax = subtotal * 0.2;\n  return subtotal + tax;\n"), after()],
+    ["an added statement doesn't call the helper", total(), after("lines.push(`Total: ${total(o)}`);\n  lines.push(\"thanks\");")],
+    ["a leftover doesn't match once the call is replaced", total(), after("lines.push(`Sum: ${total(o)}`);")],
+  ])("doesn't pair a near miss: %s", async (_case, helper, receipt) => {
+    expect((await summary(modified("src/r.ts", before, helper + receipt))).units).toEqual([
+      "total behavioural added",
+      "receipt behavioural bodyChanged",
+    ]);
+  });
+
+  it("doesn't call a new function plus a new call to it an extract", async () => {
+    const base = "export function run() {\n  a();\n}\n";
+    const head = "export function log() {\n  return 1;\n}\nexport function run() {\n  a();\n  log();\n}\n";
+    expect((await summary(modified("src/r.ts", base, head))).units).toEqual(["log behavioural added", "run behavioural bodyChanged"]);
+  });
+});
+
+describe("inline", () => {
+  it("pairs a removed helper with the function it was inlined into", async () => {
+    const base = "def total(o):\n    t = _tax(o)\n    return o.net + t\n\ndef _tax(o):\n    rate = o.rate\n    return o.net * rate\n";
+    const head = "def total(o):\n    rate = o.rate\n    t = o.net * rate\n    return o.net + t\n";
+    expect(await summary(modified("shop/tax.py", base, head))).toEqual({
+      units: ["total structural bodyChanged [inline]", "_tax structural removed [inline]"],
+      refactorings: ["inline: _tax inlined into total → _tax, total"],
+    });
+  });
+});
+
+describe("local renames", () => {
+  it("call a parameter or local renamed throughout structural", async () => {
+    const base = "export function area(w: number, h: number) {\n  const a = w * h;\n  return a;\n}\n";
+    const head = "export function area(width: number, h: number) {\n  const size = width * h;\n  return size;\n}\n";
+    expect(await summary(modified("src/a.ts", base, head))).toEqual({
+      units: ["area structural signatureChanged [rename]"],
+      refactorings: ["rename: w renamed to width, a renamed to size in area → area"],
+    });
+  });
+
+  it("leave a swapped call behavioural: it isn't a name the unit binds", async () => {
+    const base = "export function pick(x: number[]) {\n  return min(x);\n}\n";
+    const head = "export function pick(x: number[]) {\n  return max(x);\n}\n";
+    expect((await summary(modified("src/a.ts", base, head))).units).toEqual(["pick behavioural bodyChanged"]);
+  });
+
+  it("leave a rename that isn't one to one behavioural", async () => {
+    const base = "def f(a, b):\n    return a + b\n";
+    const head = "def f(a, b):\n    return a + a\n";
+    expect((await summary(modified("src/a.py", base, head))).units).toEqual(["f behavioural bodyChanged"]);
+  });
+});
