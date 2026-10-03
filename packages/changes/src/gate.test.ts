@@ -11,8 +11,11 @@ const PASSING: string[] = [
   "04-lockfile-only",
   "05-condition-change",
   "08-ui-with-test",
+  "09-ts-extract",
   "10-python-rename",
   "11-python-condition",
+  "12-python-extract",
+  "13-java-extract-move",
 ];
 
 const fixtures = loadSyntheticFixtures();
