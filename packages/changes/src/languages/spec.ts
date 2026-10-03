@@ -15,4 +15,9 @@ export interface LanguageSpec {
   testName(title: Node): string | null;
   /** Statements that are documentation, dropped from tokens like comments. */
   isDocstring?(statement: Node): boolean;
+  /**
+   * A condition besides `condition` fields, which every language shares: comparisons and boolean
+   * operators, case values, Python's `a if cond else b` (changes.md §3.4).
+   */
+  isCondition(node: Node): boolean;
 }

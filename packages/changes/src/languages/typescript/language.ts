@@ -1,4 +1,4 @@
-import { TEST_CASES, TOP_LEVEL_VARIABLES, literalTitle } from "../javascript/language.js";
+import { TEST_CASES, TOP_LEVEL_VARIABLES, cStyleCondition, literalTitle } from "../javascript/language.js";
 import type { LanguageSpec } from "../spec.js";
 
 /** For both grammars, typescript and tsx: JavaScript's declarations plus the type-level ones. */
@@ -21,4 +21,5 @@ ${TEST_CASES}`,
   wrappers: ["export_statement"],
   leading: ["decorator"],
   testName: literalTitle,
+  isCondition: cStyleCondition,
 };

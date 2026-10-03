@@ -18,6 +18,8 @@ export interface Declaration {
   lines: [number, number];
   /** What nested declarations lie in: the declarator for `const a = …, b = …`, else the node. */
   scope: { start: number; end: number };
+  /** Tokens before it are the signature: name, parameters, modifiers, decorators (§3.4). */
+  bodyStart: number;
 }
 
 const queries = new Map<CodeLanguage, Promise<Query>>();
@@ -39,6 +41,7 @@ interface Found {
   start: Node;
   /** What nested declarations must lie in: the declarator for `const a = …, b = …`. */
   scope: Node;
+  bodyStart: number;
 }
 
 /** The wrapper-including node, and the first node of the span (a leading decorator, if any). */
@@ -50,6 +53,18 @@ function spanOf(node: Node, spec: LanguageSpec): { outer: Node; start: Node } {
     start = prev;
   }
   return { outer, start };
+}
+
+/**
+ * A function's or class's `body`; a variable's or field's value (its holder is the name's parent:
+ * declarator, field or assignment); a test's callback. Without one, everything is signature.
+ */
+function bodyStartOf(node: Node, name: Node, category: DeclarationCategory): number {
+  if (category === "test") return name.nextNamedSibling?.startIndex ?? node.endIndex;
+  const holder = name.parent;
+  const body =
+    node.childForFieldName("body") ?? holder?.childForFieldName("value") ?? holder?.childForFieldName("right");
+  return body?.startIndex ?? node.endIndex;
 }
 
 /** Every declaration of a parsed file, in source order (changes.md §5.3). */
@@ -69,7 +84,14 @@ export async function declarationsOf(tree: Tree, language: CodeLanguage): Promis
     if (name === null || name === "" || seen.has(key)) continue;
     seen.add(key);
     const declarator = title.node.parent?.type === "variable_declarator" ? title.node.parent : null;
-    found.push({ name, category, node: definition.node, scope: declarator ?? definition.node, ...spanOf(definition.node, spec) });
+    found.push({
+      name,
+      category,
+      node: definition.node,
+      scope: declarator ?? definition.node,
+      bodyStart: bodyStartOf(definition.node, title.node, category),
+      ...spanOf(definition.node, spec),
+    });
   }
   // Outer ones first, so a declaration's container is already named when it is reached.
   found.sort((a, b) => a.start.startIndex - b.start.startIndex || b.outer.endIndex - a.outer.endIndex);
@@ -95,6 +117,7 @@ export async function declarationsOf(tree: Tree, language: CodeLanguage): Promis
       end: f.outer.endIndex,
       lines: [f.start.startPosition.row + 1, f.outer.endPosition.row + 1],
       scope: { start: f.scope.startIndex, end: f.scope.endIndex },
+      bodyStart: f.bodyStart,
     };
     declarations.push(declaration);
     open.push({ declaration, scope: f.scope });

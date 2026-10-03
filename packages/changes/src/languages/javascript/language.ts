@@ -18,6 +18,15 @@ export const TOP_LEVEL_VARIABLES = `
 (program (export_statement (variable_declaration (variable_declarator name: (identifier) @name)) @definition.variable))
 `;
 
+const BOOLEAN_OPERATORS = new Set(["<", ">", "<=", ">=", "==", "!=", "===", "!==", "&&", "||"]);
+
+/** Comparisons, `&&` / `||`, `!`, and a `case` value. Java's operators are a subset. */
+export function cStyleCondition(node: Node): boolean {
+  if (node.type === "binary_expression") return BOOLEAN_OPERATORS.has(node.childForFieldName("operator")?.text ?? "");
+  if (node.type === "unary_expression") return node.childForFieldName("operator")?.text === "!";
+  return node.parent?.type === "switch_case" && node.parent.childForFieldName("value")?.id === node.id;
+}
+
 /** A string title without quotes; a template title only when it has no substitutions. */
 export function literalTitle(title: Node): string | null {
   if (title.type === "template_string" && title.namedChildren.some((c) => c?.type === "template_substitution")) {
@@ -38,4 +47,5 @@ ${TEST_CASES}`,
   wrappers: ["export_statement"],
   leading: ["decorator"],
   testName: literalTitle,
+  isCondition: cStyleCondition,
 };

@@ -3,6 +3,14 @@ import type { LanguageSpec } from "../spec.js";
 
 const DOCUMENTED = new Set(["module", "function_definition", "class_definition"]);
 
+const CONDITIONS = new Set(["comparison_operator", "boolean_operator", "not_operator"]);
+
+/** Comparisons, `and` / `or` / `not`, and the middle of `a if cond else b`. */
+function isCondition(node: Node): boolean {
+  if (CONDITIONS.has(node.type)) return true;
+  return node.parent?.type === "conditional_expression" && node.parent.namedChild(1)?.id === node.id;
+}
+
 /** A string statement that opens a module, class or function body. */
 function isDocstring(statement: Node): boolean {
   if (statement.type !== "expression_statement" || statement.namedChildCount !== 1) return false;
@@ -27,4 +35,5 @@ export const python: LanguageSpec = {
   leading: [],
   testName: () => null,
   isDocstring,
+  isCondition,
 };

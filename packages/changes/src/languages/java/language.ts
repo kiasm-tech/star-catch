@@ -1,3 +1,4 @@
+import { cStyleCondition } from "../javascript/language.js";
 import type { LanguageSpec } from "../spec.js";
 
 /** Annotations live inside a declaration's `modifiers`, so nothing wraps or precedes it. */
@@ -17,4 +18,6 @@ export const java: LanguageSpec = {
   wrappers: [],
   leading: [],
   testName: () => null,
+  // A case value sits in a switch_label.
+  isCondition: (node) => cStyleCondition(node) || node.type === "switch_label",
 };
