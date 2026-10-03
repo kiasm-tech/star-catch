@@ -192,14 +192,14 @@ importers:
       '@kiasm-tech/star-catch-contracts':
         specifier: workspace:*
         version: link:../contracts
+    devDependencies:
       '@testcontainers/postgresql':
         specifier: ^12.2.0
         version: 12.2.0
-      pg:
+      '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
-    devDependencies:
-      '@types/pg':
+      pg:
         specifier: ^8.23.1
         version: 8.23.1
 
