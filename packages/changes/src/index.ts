@@ -17,3 +17,18 @@ export {
   type Unit,
 } from "./schema.js";
 export { toAnalyzeInput } from "./input.js";
+export type { Classifier, LabelCache } from "./classify/port.js";
+export {
+  ClassifyItemSchema,
+  ClassifyResultSchema,
+  RuleLabelsSchema,
+  StoredLabelsSchema,
+  type ClassifyItem,
+  type ClassifyResult,
+  type RuleLabels,
+  type SentenceItem,
+  type SentenceResult,
+  type StoredLabels,
+  type UnitItem,
+  type UnitResult,
+} from "./classify/schema.js";
