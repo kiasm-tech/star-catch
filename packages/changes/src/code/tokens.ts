@@ -6,6 +6,8 @@ import type { Declaration } from "./declarations.js";
 /** A leaf of the syntax tree; whitespace never is one (changes.md §3.2). */
 export interface Token {
   text: string;
+  /** The leaf's node type: `identifier`, `property_identifier`, `number`, … */
+  type: string;
   /** JS string indexes. */
   start: number;
   end: number;
@@ -31,7 +33,8 @@ export function tokensOf(tree: Tree, source: string, spec: Pick<LanguageSpec, "i
           if (cursor.gotoFirstChild()) continue;
           // A missing node, inserted by error recovery, has no text.
           if (cursor.endIndex > cursor.startIndex) {
-            tokens.push({ text: source.slice(cursor.startIndex, cursor.endIndex), start: cursor.startIndex, end: cursor.endIndex });
+            const { startIndex: start, endIndex: end } = cursor;
+            tokens.push({ text: source.slice(start, end), type, start, end });
           }
         }
       }
@@ -50,10 +53,10 @@ export function tokensOf(tree: Tree, source: string, spec: Pick<LanguageSpec, "i
 type Range = { start: number; end: number };
 
 /**
- * A declaration's own tokens: those in its span, minus the declarations nested in it (each is its
- * own unit) and minus siblings declared in the same statement (`const a = 1, b = 2`).
+ * What isn't a declaration's own: the declarations nested in it (each is its own unit) and
+ * siblings declared in the same statement (`const a = 1, b = 2`). Sorted, non-overlapping.
  */
-export function ownTokens(tokens: Token[], declaration: Declaration, declarations: Declaration[]): Token[] {
+function othersIn(declaration: Declaration, declarations: Declaration[]): Range[] {
   const others: Range[] = [];
   for (const other of declarations) {
     if (other === declaration) continue;
@@ -64,6 +67,24 @@ export function ownTokens(tokens: Token[], declaration: Declaration, declaration
     if (nested) others.push({ start: other.start, end: other.end });
     else if (other.node.id === declaration.node.id) others.push(other.scope);
   }
+  others.sort((a, b) => a.start - b.start);
+  return others.filter((r, i) => !others.slice(0, i).some((o) => o.start <= r.start && r.end <= o.end));
+}
+
+/** A declaration's own text: its span without `othersIn`; formatting and comments included. */
+export function ownText(source: string, declaration: Declaration, declarations: Declaration[]): string {
+  let text = "";
+  let at = declaration.start;
+  for (const range of othersIn(declaration, declarations)) {
+    text += source.slice(at, Math.max(at, range.start));
+    at = Math.max(at, range.end);
+  }
+  return text + source.slice(at, declaration.end);
+}
+
+/** A declaration's own tokens: those in its span, minus `othersIn`. */
+export function ownTokens(tokens: Token[], declaration: Declaration, declarations: Declaration[]): Token[] {
+  const others = othersIn(declaration, declarations);
   const own: Token[] = [];
   for (let i = firstAtOrAfter(tokens, declaration.start); i < tokens.length && tokens[i].end <= declaration.end; i++) {
     const token = tokens[i];
@@ -75,6 +96,17 @@ export function ownTokens(tokens: Token[], declaration: Declaration, declaration
 /** Tokens outside every declaration: imports and top-level statements, the file's residue (§5.4). */
 export function residueTokens(tokens: Token[], declarations: Declaration[]): Token[] {
   return tokens.filter((t) => !declarations.some((d) => d.start <= t.start && t.end <= d.end));
+}
+
+/** The residue's text, formatting and comments included. */
+export function residueText(source: string, declarations: Declaration[]): string {
+  let text = "";
+  let at = 0;
+  for (const d of [...declarations].sort((a, b) => a.start - b.start)) {
+    text += source.slice(at, Math.max(at, d.start));
+    at = Math.max(at, d.end);
+  }
+  return text + source.slice(at);
 }
 
 /** sha1 of the token texts joined with \0. */

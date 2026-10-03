@@ -6,7 +6,7 @@ import { typescript } from "../languages/typescript/language.js";
 import type { LanguageSpec } from "../languages/spec.js";
 import { declarationsOf } from "./declarations.js";
 import { parse, parserFor, type CodeLanguage } from "./parse.js";
-import { hashTokens, ownTokens, residueTokens, tokensOf } from "./tokens.js";
+import { hashTokens, ownText, ownTokens, residueText, residueTokens, tokensOf } from "./tokens.js";
 
 const SPECS: Partial<Record<CodeLanguage, LanguageSpec>> = { typescript, tsx: typescript, python, java };
 const later = { deadline: Number.POSITIVE_INFINITY };
@@ -101,8 +101,23 @@ describe("hashes on the fixtures", () => {
   });
 
   it("is sha1 of the tokens joined with NUL", () => {
-    expect(hashTokens([{ text: "a", start: 0, end: 1 }, { text: "b", start: 2, end: 3 }])).toBe(
+    expect(hashTokens([{ text: "a", type: "identifier", start: 0, end: 1 }, { text: "b", type: "identifier", start: 2, end: 3 }])).toBe(
       "4a3dec2d1f8245280855c42db0ee4239f917fdb8",
     );
+  });
+});
+
+describe("ownText", () => {
+  it("leaves nested declarations out, so a changed method doesn't change its class's text", async () => {
+    const source = "export class Cart {\n  // items\n  total() { return 1; }\n}\n";
+    const tree = parse(await parserFor("typescript"), source, later)!;
+    try {
+      const declarations = await declarationsOf(tree, "typescript");
+      const cart = declarations.find((d) => d.qualifiedName === "Cart")!;
+      expect(ownText(source, cart, declarations)).toBe("export class Cart {\n  // items\n  \n}");
+      expect(residueText(source, declarations)).toBe("\n");
+    } finally {
+      tree.delete();
+    }
   });
 });
