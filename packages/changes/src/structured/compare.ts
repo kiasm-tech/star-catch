@@ -3,13 +3,20 @@ import type { AnalyzeInput, FileClass, Unit } from "../schema.js";
 import { configEntries } from "./config.js";
 import type { Entry } from "./entries.js";
 import { manifestEntries } from "./manifests.js";
+import { markdownSections } from "./markdown.js";
+import { compareSections, type Section } from "./sections.js";
+import { sqlSections } from "./sql.js";
 
-/** The structured languages read in this module; SQL and Markdown have their own. */
 const CONFIG_LANGUAGES = new Set(["json", "yaml", "toml"]);
+const SECTIONED: Record<string, (text: string) => Section[]> = { sql: sqlSections, markdown: markdownSections };
 const MANIFEST_LANGUAGES = new Set(["json", "toml", "xml", "gradle", "gomod", "requirements"]);
 
 export function readsStructured(language: string, fileClass: FileClass): boolean {
-  return CONFIG_LANGUAGES.has(language) || (fileClass === "manifest" && MANIFEST_LANGUAGES.has(language));
+  return (
+    CONFIG_LANGUAGES.has(language) ||
+    Object.hasOwn(SECTIONED, language) ||
+    (fileClass === "manifest" && MANIFEST_LANGUAGES.has(language))
+  );
 }
 
 export interface StructuredFile {
@@ -37,6 +44,13 @@ export function compareStructured(structured: StructuredFile): { units: Unit[] }
   const needsHead = file.status !== "removed";
   if ((needsBase && file.base === undefined) || (needsHead && file.head === undefined)) {
     return { error: "content missing from the snapshot" };
+  }
+  const sectioned = SECTIONED[language];
+  if (sectioned) {
+    const fields = { file: file.path, language, refactorings: [], component, fileClass, references: [] };
+    return {
+      units: compareSections(file.path, needsBase ? sectioned(file.base!) : [], needsHead ? sectioned(file.head!) : [], fields),
+    };
   }
   let base: Entry[] = [];
   let head: Entry[] = [];
