@@ -13,4 +13,6 @@ export interface LanguageSpec {
   leading: string[];
   /** A test's title node → its name; null when the title isn't a literal. */
   testName(title: Node): string | null;
+  /** Statements that are documentation, dropped from tokens like comments. */
+  isDocstring?(statement: Node): boolean;
 }

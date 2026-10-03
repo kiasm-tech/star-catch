@@ -21,6 +21,8 @@ export interface Declaration {
   end: number;
   /** 1-based, inclusive. */
   lines: [number, number];
+  /** What nested declarations lie in: the declarator for `const a = …, b = …`, else the node. */
+  scope: { start: number; end: number };
 }
 
 const queries = new Map<CodeLanguage, Promise<Query>>();
@@ -97,6 +99,7 @@ export async function declarationsOf(tree: Tree, language: CodeLanguage): Promis
       start: f.start.startIndex,
       end: f.outer.endIndex,
       lines: [f.start.startPosition.row + 1, f.outer.endPosition.row + 1],
+      scope: { start: f.scope.startIndex, end: f.scope.endIndex },
     };
     declarations.push(declaration);
     open.push({ declaration, scope: f.scope });
