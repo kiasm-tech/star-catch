@@ -40,6 +40,15 @@ describe("compareCode", () => {
     expect(found[1]).toMatchObject({ span: { base: [2, 2] }, before: "export function gone() {}", references: [] });
   });
 
+  it("doesn't report a container whose only change is a member added or removed", async () => {
+    expect(summary(await units(modified("export class Money {\n}\n", "export class Money {\n  cents() {}\n}\n")))).toEqual([
+      "Money.cents declaration behavioural added",
+    ]);
+    expect(summary(await units(modified("class A {\n  a() {}\n  b() {}\n}\n", "class A {\n  a() {}\n}\n")))).toEqual([
+      "A.b declaration behavioural removed",
+    ]);
+  });
+
   it("gives the residue its own file unit, notAChange when only reformatted", async () => {
     const body = "export function f() {}\n";
     expect(summary(await units(modified(`import {a} from "a";\n${body}`, `import { a } from "a";\n${body}`)))).toEqual([

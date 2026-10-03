@@ -17,6 +17,8 @@ interface Side {
   ownText: string;
   /** The span's text, nested declarations included: what a reader sees. */
   code: string;
+  /** Names of the declarations nested in it, one per line. */
+  members: string;
   lines: [number, number];
   start: number;
   references: string[];
@@ -25,7 +27,7 @@ interface Side {
 interface ReadFile {
   tree: Tree;
   declarations: Map<string, Side>;
-  residue: { hash: string; text: string; empty: boolean };
+  residue: { hash: string; text: string; empty: boolean; tokens: Token[] };
 }
 
 const isIdentifier = (token: Token) => token.type.endsWith("identifier");
@@ -56,7 +58,7 @@ async function readSide(language: CodeLanguage, source: string, budget: ParseBud
     return {
       tree,
       declarations,
-      residue: { hash: hashTokens(residue), text: residueText(source, tokens, found), empty: residue.length === 0 },
+      residue: { hash: hashTokens(residue), text: residueText(source, tokens, found), empty: residue.length === 0, tokens: residue },
     };
   } catch (error) {
     tree.delete();
@@ -66,7 +68,10 @@ async function readSide(language: CodeLanguage, source: string, budget: ParseBud
 
 function sideOf(source: string, tokens: Token[], d: Declaration, all: Declaration[]): Side {
   const own = ownTokens(tokens, d, all);
+  const inside = (o: Declaration) =>
+    o !== d && d.scope.start <= o.scope.start && o.scope.end <= d.scope.end && (o.scope.start !== d.scope.start || o.scope.end !== d.scope.end);
   return {
+    members: all.filter(inside).map((o) => o.qualifiedName).join("\n"),
     declaration: d,
     tokens: own,
     name: d.qualifiedName,
@@ -86,8 +91,14 @@ export interface CodeFile {
   component: string;
 }
 
-/** `degraded` when a changed declaration overlaps a parse error. */
-export type CompareResult = { units: Unit[]; degraded: boolean } | { error: string };
+/** A unit's own tokens on each side, for refactoring detection across files. */
+export interface UnitTokens {
+  base?: Token[];
+  head?: Token[];
+}
+
+/** `degraded` when a changed declaration overlaps a parse error. `tokens` is keyed by unit id. */
+export type CompareResult = { units: Unit[]; degraded: boolean; tokens: Map<string, UnitTokens> } | { error: string };
 
 const clip = (code: string | undefined) => code?.slice(0, MAX_UNIT_CODE_CHARS);
 const basename = (path: string) => path.slice(path.lastIndexOf("/") + 1);
@@ -122,6 +133,7 @@ function unitsOf(
 ): CompareResult {
   const spec = SPECS[language];
   let degraded = false;
+  const tokens = new Map<string, UnitTokens>();
 
   const unit = (name: string, fields: Partial<Unit> & Pick<Unit, "verdict" | "changeType" | "unitKind">): Unit => ({
     id: `${path}#${name}`,
@@ -142,6 +154,7 @@ function unitsOf(
     const before = base?.declarations.get(name);
     const after = head?.declarations.get(name);
     if (before && after && before.hash === after.hash && before.ownText === after.ownText) continue;
+    tokens.set(`${path}#${name}`, { base: before?.tokens, head: after?.tokens });
     const shared = {
       unitKind: "declaration" as const,
       before: clip(before?.code),
@@ -150,6 +163,8 @@ function unitsOf(
       references: after?.references ?? [],
     };
     if (before && after && before.hash === after.hash) {
+      // Adding or removing a member reshapes its container's text; that's not an edit of the container.
+      if (before.members !== after.members) continue;
       units.push(unit(name, { ...shared, verdict: "notAChange", changeType: "bodyChanged" }));
     } else if (before && after) {
       const broken = before.declaration.node.hasError || after.declaration.node.hasError;
@@ -162,10 +177,13 @@ function unitsOf(
   }
 
   const residue = residueUnit(base?.residue, head?.residue);
-  if (residue) units.push(unit(basename(path), { unitKind: "file", ...residue }));
+  if (residue) {
+    units.push(unit(basename(path), { unitKind: "file", ...residue }));
+    tokens.set(`${path}#${basename(path)}`, { base: base?.residue.tokens, head: head?.residue.tokens });
+  }
 
   const lineOf = (u: Unit) => u.span.head?.[0] ?? u.span.base?.[0] ?? 0;
-  return { units: units.sort((a, b) => lineOf(a) - lineOf(b) || a.id.localeCompare(b.id)), degraded };
+  return { units: units.sort((a, b) => lineOf(a) - lineOf(b) || a.id.localeCompare(b.id)), degraded, tokens };
 }
 
 type Region = "signature" | "condition" | "body";
