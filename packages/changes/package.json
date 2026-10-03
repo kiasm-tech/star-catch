@@ -1,0 +1,16 @@
+{
+  "name": "@star-catch/changes",
+  "private": true,
+  "description": "The domain: turns a pull request's files into change units. No I/O.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@star-catch/testkit": "workspace:*"
+  }
+}
