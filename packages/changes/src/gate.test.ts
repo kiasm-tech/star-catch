@@ -7,9 +7,11 @@ import { toAnalyzeInput } from "./input.js";
 const PASSING: string[] = [
   "01-formatting-only",
   "02-comment-only",
+  "03-rename-only",
   "04-lockfile-only",
   "05-condition-change",
   "08-ui-with-test",
+  "10-python-rename",
   "11-python-condition",
 ];
 
