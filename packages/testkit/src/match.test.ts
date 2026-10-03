@@ -119,5 +119,6 @@ describe("expectChangesMatch", () => {
   it("leaves what a later stage decides to the later stage", () => {
     const later = { pr: { number: 9 }, links: [{ from: "x", to: "y", type: "calls" }], entryPoints: [{ unitId: "x" }] };
     expect(differs(later)).toBeNull();
+    expect(differs({ units: [{ id: "a.ts#run", labels: { kind: "logic" } }] })).toBeNull();
   });
 });

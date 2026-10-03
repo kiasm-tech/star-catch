@@ -81,10 +81,11 @@ export interface ChangesLike {
 }
 
 /**
- * Like expectContextMatches, restricted to `units`, `excluded` and `truncated`. Links and entry
- * points in the expectation come from a later stage and are not compared.
+ * Like expectContextMatches, restricted to `units`, `excluded` and `truncated`. Unit labels, links
+ * and entry points in the expectation come from a later stage and are not compared.
  */
 export function expectChangesMatch(actual: ChangesLike, expected: ContextExpectation): void {
-  const { units, excluded, truncated } = expected;
+  const { excluded, truncated } = expected;
+  const units = expected.units?.map(({ labels: _labels, ...unit }) => unit);
   matchValue(actual, { units, excluded, truncated }, "");
 }
