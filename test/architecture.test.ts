@@ -9,11 +9,13 @@ const CONTRACTS = "@kiasm-tech/star-catch-contracts";
 const PIPELINE = "@star-catch/pipeline";
 const ADAPTERS = "@star-catch/adapters";
 const TESTKIT = "@star-catch/testkit";
+const CHANGES = "@star-catch/changes";
 
-/** Dependencies point inward: apps → adapters → core (pipeline) → contracts. */
+/** Dependencies point inward: apps → adapters → core (pipeline) → domain (changes) → contracts. */
 const ALLOWED: Record<string, string[]> = {
   [CONTRACTS]: [],
   [TESTKIT]: [CONTRACTS],
+  [CHANGES]: [CONTRACTS],
   [PIPELINE]: [CONTRACTS],
   [ADAPTERS]: [CONTRACTS, PIPELINE],
   "@star-catch/cli": [CONTRACTS, PIPELINE, ADAPTERS],
@@ -24,6 +26,7 @@ const ALLOWED: Record<string, string[]> = {
 /** Packages that must stay free of I/O, and the only modules they may import. */
 const PURE: Record<string, string[]> = {
   "packages/contracts": ["zod"],
+  "packages/changes": ["zod", CONTRACTS, "node:crypto"],
   "packages/pipeline": ["zod", CONTRACTS],
 };
 

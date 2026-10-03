@@ -27,6 +27,20 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/changes/src/**/*.ts"],
+    ignores: ["**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          // Hashing tokens is not I/O.
+          patterns: [{ ...io, group: [...io.group, "!node:crypto"] }],
+          paths: outward("@star-catch/pipeline", "@star-catch/adapters", "@star-catch/testkit"),
+        },
+      ],
+    },
+  },
+  {
     files: ["packages/pipeline/src/**/*.ts"],
     ignores: ["**/*.test.ts"],
     rules: {
