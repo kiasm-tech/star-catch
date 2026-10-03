@@ -1,7 +1,7 @@
 import { loadRecordedSnapshots, loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
 import { languageOf } from "../languages/registry.js";
-import { declarationsOf, hasDeclarations } from "./declarations.js";
+import { declarationsOf } from "./declarations.js";
 import { isCodeLanguage, parse, parserFor, type CodeLanguage } from "./parse.js";
 
 const later = { deadline: Number.POSITIVE_INFINITY };
@@ -168,18 +168,160 @@ describe("declarationsOf: TSX and JavaScript", () => {
   });
 });
 
+describe("declarationsOf: Python", () => {
+  const PY = `"""Invoices."""
+from dataclasses import dataclass
+
+VAT: float = 0.21
+LIMIT = 5
+type Cents = int
+
+
+@dataclass
+class Invoice:
+    """An invoice."""
+
+    currency: str = "EUR"
+    lines: list
+
+    @property
+    def total(self):
+        def round2(n):
+            return round(n, 2)
+
+        subtotal = sum(self.lines)
+        return round2(subtotal)
+
+    def total(self, vat):
+        return self.total * vat
+
+
+@app.get("/invoices")
+@cache
+def list_invoices():
+    return []
+
+
+def test_totals():
+    assert True
+`;
+
+  it("finds functions, classes, type aliases and module and class variables", async () => {
+    expect(names(await declarations("python", PY))).toEqual([
+      "variable VAT",
+      "variable LIMIT",
+      "type Cents",
+      "type Invoice",
+      "variable Invoice.currency",
+      "variable Invoice.lines",
+      "callable Invoice.total",
+      "callable Invoice.total.round2",
+      "callable Invoice.total (2)",
+      "callable list_invoices",
+      "callable test_totals",
+    ]);
+  });
+
+  it("spans a declaration with its decorators", async () => {
+    const found = await declarations("python", PY);
+    expect(found.find((d) => d.qualifiedName === "Invoice")!.text).toMatch(/^@dataclass\nclass Invoice:/);
+    expect(found.find((d) => d.qualifiedName === "list_invoices")!.text).toMatch(/^@app\.get\("\/invoices"\)\n@cache\ndef list_invoices/);
+    expect(found.find((d) => d.qualifiedName === "Invoice.total")!.text).toMatch(/^@property\n {4}def total\(self\):/);
+  });
+
+  it("skips locals", async () => {
+    expect(names(await declarations("python", PY)).some((n) => n.includes("subtotal"))).toBe(false);
+  });
+});
+
+describe("declarationsOf: Java", () => {
+  const JAVA = `package com.acme.shop;
+
+import java.util.List;
+
+/** Orders. */
+public class OrderService {
+    private static final long FREE = 5000, CAP = 9000;
+    private final List<String> log = List.of();
+
+    public OrderService() {}
+
+    @Override
+    public String toString() {
+        return "orders";
+    }
+
+    public long total(long cents) {
+        return cents;
+    }
+
+    public long total(long cents, long tax) {
+        return cents + tax;
+    }
+
+    interface Rule {
+        boolean applies(long cents);
+    }
+
+    enum Kind {
+        PHYSICAL, DIGITAL;
+
+        boolean shipped() {
+            return this == PHYSICAL;
+        }
+    }
+}
+
+record Point(int x, int y) {
+    Point {
+    }
+}
+
+@interface Audited {
+    String reason();
+}
+`;
+
+  it("finds types, members, constructors and fields, qualified by their classes", async () => {
+    expect(names(await declarations("java", JAVA))).toEqual([
+      "type OrderService",
+      "variable OrderService.FREE",
+      "variable OrderService.CAP",
+      "variable OrderService.log",
+      "callable OrderService.OrderService",
+      "callable OrderService.toString",
+      "callable OrderService.total",
+      "callable OrderService.total (2)",
+      "type OrderService.Rule",
+      "callable OrderService.Rule.applies",
+      "type OrderService.Kind",
+      "callable OrderService.Kind.shipped",
+      "type Point",
+      "callable Point.Point",
+      "type Audited",
+      "callable Audited.reason",
+    ]);
+  });
+
+  it("keeps annotations in the span", async () => {
+    const found = await declarations("java", JAVA);
+    expect(found.find((d) => d.qualifiedName === "OrderService.toString")!.text).toMatch(/^@Override\n {4}public String toString/);
+  });
+});
+
 describe("declarationsOf: the fixtures", () => {
   const files = [...loadSyntheticFixtures().map((f) => f.snapshot), ...loadRecordedSnapshots()].flatMap((snapshot) =>
     snapshot.files.flatMap((file) => {
       const { language } = languageOf(file.filename);
-      if (!isCodeLanguage(language) || !hasDeclarations(language)) return [];
+      if (!isCodeLanguage(language)) return [];
       return [file.baseContent, file.headContent].flatMap((text, side) =>
         text === undefined ? [] : [{ label: `${file.filename} ${side === 0 ? "base" : "head"}`, language, text }],
       );
     }),
   );
 
-  it("has TS and JS files to read", () => {
+  it("has files in every code language to read", () => {
+    expect(new Set(files.map((f) => f.language))).toEqual(new Set(["typescript", "tsx", "python", "java"]));
     expect(files.length).toBeGreaterThan(20);
   });
 
@@ -187,6 +329,27 @@ describe("declarationsOf: the fixtures", () => {
     const found = await declarations(f.language, f.text);
     expect(new Set(found.map((d) => d.qualifiedName)).size).toBe(found.length);
     for (const d of found) expect(f.text.includes(d.text)).toBe(true);
+  });
+
+  it("finds every declaration unit the answer key names, under that name", async () => {
+    const missing: string[] = [];
+    let checked = 0;
+    for (const { name, snapshot, expected } of loadSyntheticFixtures()) {
+      for (const unit of expected.units ?? []) {
+        if (unit.unitKind !== "declaration" || !unit.id) continue;
+        const [path, qualifiedName] = unit.id.split("#");
+        const file = snapshot.files.find((f) => f.filename === path)!;
+        const { language } = languageOf(path);
+        if (!isCodeLanguage(language)) continue;
+        const sides = await Promise.all(
+          [file.baseContent, file.headContent].map((text) => (text === undefined ? [] : declarations(language, text))),
+        );
+        checked++;
+        if (!sides.flat().some((d) => d.qualifiedName === qualifiedName)) missing.push(`${name}: ${unit.id}`);
+      }
+    }
+    expect(missing).toEqual([]);
+    expect(checked).toBe(19);
   });
 
   it("splits the large recorded test files into test cases", async () => {

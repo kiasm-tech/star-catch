@@ -1,10 +1,12 @@
 import { Query, type Node, type Tree } from "web-tree-sitter";
+import { java } from "../languages/java/language.js";
 import { javascript } from "../languages/javascript/language.js";
+import { python } from "../languages/python/language.js";
 import type { DeclarationCategory, LanguageSpec } from "../languages/spec.js";
 import { typescript } from "../languages/typescript/language.js";
 import { loadLanguage, type CodeLanguage } from "./parse.js";
 
-const SPECS: Partial<Record<CodeLanguage, LanguageSpec>> = { typescript, tsx: typescript, javascript };
+const SPECS: Record<CodeLanguage, LanguageSpec> = { typescript, tsx: typescript, javascript, python, java };
 
 export interface Declaration {
   /** As written; a test's title. */
@@ -20,8 +22,6 @@ export interface Declaration {
   /** 1-based, inclusive. */
   lines: [number, number];
 }
-
-export const hasDeclarations = (language: CodeLanguage): boolean => SPECS[language] !== undefined;
 
 const queries = new Map<CodeLanguage, Promise<Query>>();
 
@@ -58,7 +58,6 @@ function spanOf(node: Node, spec: LanguageSpec): { outer: Node; start: Node } {
 /** Every declaration of a parsed file, in source order (changes.md §5.3). */
 export async function declarationsOf(tree: Tree, language: CodeLanguage): Promise<Declaration[]> {
   const spec = SPECS[language];
-  if (!spec) throw new Error(`No declaration rules for ${language}`);
   const query = await queryFor(language, spec);
 
   const found: Found[] = [];
