@@ -176,6 +176,9 @@ importers:
       '@kiasm-tech/star-catch-contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@star-catch/changes':
+        specifier: workspace:*
+        version: link:../changes
       zod:
         specifier: ^4.4.3
         version: 4.6.5

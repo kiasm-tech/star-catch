@@ -16,7 +16,7 @@ const ALLOWED: Record<string, string[]> = {
   [CONTRACTS]: [],
   [TESTKIT]: [CONTRACTS],
   [CHANGES]: [CONTRACTS],
-  [PIPELINE]: [CONTRACTS],
+  [PIPELINE]: [CONTRACTS, CHANGES],
   [ADAPTERS]: [CONTRACTS, PIPELINE],
   "@star-catch/cli": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/intake": [CONTRACTS, PIPELINE, ADAPTERS],
@@ -36,7 +36,7 @@ const PURE: Record<string, string[]> = {
     "smol-toml",
     "fast-xml-parser",
   ],
-  "packages/pipeline": ["zod", CONTRACTS],
+  "packages/pipeline": ["zod", CONTRACTS, CHANGES],
 };
 
 /** Single files of a pure package that may also import these. */
