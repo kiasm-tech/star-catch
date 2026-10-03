@@ -4,7 +4,7 @@ import { analyze } from "./analyze.js";
 import { toAnalyzeInput } from "./input.js";
 
 /** Synthetic fixtures whose expected units and exclusions the analysis must already reproduce. */
-const PASSING: string[] = ["04-lockfile-only"];
+const PASSING: string[] = ["01-formatting-only", "02-comment-only", "04-lockfile-only", "08-ui-with-test"];
 
 const fixtures = loadSyntheticFixtures();
 
