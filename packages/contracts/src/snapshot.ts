@@ -14,6 +14,14 @@ export const SNAPSHOT_LIMITS = {
   bodyChars: 20_000,
 } as const;
 
+/** Files by extension that are never text: the snapshot skips their contents, analysis excludes them. */
+export const BINARY_EXTENSION_PATTERN =
+  /\.(png|jpe?g|gif|webp|ico|bmp|pdf|zip|gz|tgz|tar|7z|mp3|mp4|mov|wav|woff2?|ttf|otf|eot|wasm|jar|exe|dll|so|dylib|bin|lockb)$/i;
+
+/** Lockfiles: the snapshot skips their contents, analysis excludes them. */
+export const LOCKFILE_PATTERN =
+  /(^|\/)(pnpm-lock\.yaml|bun\.lockb?|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Pipfile\.lock|go\.sum|Gemfile\.lock|composer\.lock|pubspec\.lock|Podfile\.lock|Package\.resolved|packages\.lock\.json|gradle\.lockfile|mix\.lock|flake\.lock)$/;
+
 export const CI_CONCLUSIONS = ["success", "failure", "pending", "none"] as const;
 
 export const PullRequestSnapshotFileSchema = z.object({
