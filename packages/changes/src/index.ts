@@ -1,3 +1,5 @@
+export { analyze } from "./analyze.js";
+export { DEFAULT_BUDGETS } from "./budget.js";
 export {
   ANALYZER_VERSION,
   AnalyzeInputSchema,
