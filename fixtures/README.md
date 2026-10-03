@@ -46,7 +46,7 @@ the contracts, the patch counts, and that each patch turns the base content into
 | 06-config-key | New key in `config/flags.json` → configKey added, kind configuration |
 | 07-migration | SQL migration adds a column → schemaEntity added, risk dataMigration |
 | 08-ui-with-test | Page text and its test changed → ui unit, a test-case unit, covers link, page entry point |
-| 09-ts-extract | TS block extracted into a helper → both behavioural today; refactoring detection makes it structural, extract |
+| 09-ts-extract | TS block extracted into a helper → both structural, extract |
 | 10-python-rename | Python function renamed, callers updated → structural, rename |
 | 11-python-condition | Python threshold changed → behavioural, conditionChanged |
 | 12-python-extract | Python method extracted → structural, extract |

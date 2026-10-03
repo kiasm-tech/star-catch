@@ -11,18 +11,22 @@
       "file": "src/orders/receipt.ts",
       "name": "orderTotal",
       "unitKind": "declaration",
-      "verdict": "behavioural",
+      "verdict": "structural",
       "changeType": "added",
-      "refactorings": []
+      "refactorings": [
+        "extract"
+      ]
     },
     {
       "id": "src/orders/receipt.ts#receiptLines",
       "file": "src/orders/receipt.ts",
       "name": "receiptLines",
       "unitKind": "declaration",
-      "verdict": "behavioural",
+      "verdict": "structural",
       "changeType": "bodyChanged",
-      "refactorings": []
+      "refactorings": [
+        "extract"
+      ]
     }
   ],
   "links": [
