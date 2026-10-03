@@ -1,12 +1,17 @@
-import { MAX_UNIT_CODE_CHARS } from "@kiasm-tech/star-catch-contracts";
+import { MAX_UNIT_CODE_CHARS, type ChangeType } from "@kiasm-tech/star-catch-contracts";
+import type { Tree } from "web-tree-sitter";
+import type { LanguageSpec } from "../languages/spec.js";
 import { SPECS } from "../languages/specs.js";
 import { MAX_REFERENCES, type AnalyzeInput, type FileClass, type Unit } from "../schema.js";
 import { declarationsOf, type Declaration } from "./declarations.js";
+import { diffTokens } from "./diff.js";
 import { parse, parserFor, type CodeLanguage, type ParseBudget } from "./parse.js";
 import { hashTokens, ownText, ownTokens, residueText, residueTokens, tokensOf, type Token } from "./tokens.js";
 
-/** One side of a declaration, read while its tree was alive. */
+/** One side of a declaration. Its `declaration.node` is valid until `compareCode` deletes the tree. */
 interface Side {
+  declaration: Declaration;
+  tokens: Token[];
   name: string;
   hash: string;
   ownText: string;
@@ -18,6 +23,7 @@ interface Side {
 }
 
 interface ReadFile {
+  tree: Tree;
   declarations: Map<string, Side>;
   residue: { hash: string; text: string; empty: boolean };
 }
@@ -37,7 +43,7 @@ function referencesOf(tokens: Token[], name: string): string[] {
   return references;
 }
 
-/** Null when parsing ran out of time. */
+/** Null when parsing ran out of time. The caller deletes the tree. */
 async function readSide(language: CodeLanguage, source: string, budget: ParseBudget): Promise<ReadFile | null> {
   const tree = parse(await parserFor(language), source, budget);
   if (!tree) return null;
@@ -48,17 +54,21 @@ async function readSide(language: CodeLanguage, source: string, budget: ParseBud
     for (const d of found) declarations.set(d.qualifiedName, sideOf(source, tokens, d, found));
     const residue = residueTokens(tokens, found);
     return {
+      tree,
       declarations,
       residue: { hash: hashTokens(residue), text: residueText(source, tokens, found), empty: residue.length === 0 },
     };
-  } finally {
+  } catch (error) {
     tree.delete();
+    throw error;
   }
 }
 
 function sideOf(source: string, tokens: Token[], d: Declaration, all: Declaration[]): Side {
   const own = ownTokens(tokens, d, all);
   return {
+    declaration: d,
+    tokens: own,
     name: d.qualifiedName,
     hash: hashTokens(own),
     ownText: ownText(source, tokens, d, all),
@@ -76,7 +86,8 @@ export interface CodeFile {
   component: string;
 }
 
-export type CompareResult = { units: Unit[] } | { error: string };
+/** `degraded` when a changed declaration overlaps a parse error. */
+export type CompareResult = { units: Unit[]; degraded: boolean } | { error: string };
 
 const clip = (code: string | undefined) => code?.slice(0, MAX_UNIT_CODE_CHARS);
 const basename = (path: string) => path.slice(path.lastIndexOf("/") + 1);
@@ -92,10 +103,26 @@ export async function compareCode({ file, language, fileClass, component }: Code
     return { error: "content missing from the snapshot" };
   }
   const base = needsBase ? await readSide(language, file.base!, budget) : null;
-  const head = needsHead ? await readSide(language, file.head!, budget) : null;
-  if ((needsBase && !base) || (needsHead && !head)) return { error: "parsing took longer than its budget" };
+  let head: ReadFile | null = null;
+  try {
+    head = needsHead ? await readSide(language, file.head!, budget) : null;
+    if ((needsBase && !base) || (needsHead && !head)) return { error: "parsing took longer than its budget" };
+    return unitsOf(file.path, { language, fileClass, component }, base, head);
+  } finally {
+    base?.tree.delete();
+    head?.tree.delete();
+  }
+}
 
-  const path = file.path;
+function unitsOf(
+  path: string,
+  { language, fileClass, component }: Omit<CodeFile, "file">,
+  base: ReadFile | null,
+  head: ReadFile | null,
+): CompareResult {
+  const spec = SPECS[language];
+  let degraded = false;
+
   const unit = (name: string, fields: Partial<Unit> & Pick<Unit, "verdict" | "changeType" | "unitKind">): Unit => ({
     id: `${path}#${name}`,
     file: path,
@@ -122,9 +149,13 @@ export async function compareCode({ file, language, fileClass, component }: Code
       span: { ...(before && { base: before.lines }), ...(after && { head: after.lines }) },
       references: after?.references ?? [],
     };
-    if (before && after) {
-      const verdict = before.hash === after.hash ? "notAChange" : "behavioural";
-      units.push(unit(name, { ...shared, verdict, changeType: "bodyChanged" }));
+    if (before && after && before.hash === after.hash) {
+      units.push(unit(name, { ...shared, verdict: "notAChange", changeType: "bodyChanged" }));
+    } else if (before && after) {
+      const broken = before.declaration.node.hasError || after.declaration.node.hasError;
+      degraded ||= broken;
+      const changeType = broken ? "bodyChanged" : changeTypeOf(spec, base!.tree, before, head!.tree, after);
+      units.push(unit(name, { ...shared, verdict: "behavioural", changeType }));
     } else {
       units.push(unit(name, { ...shared, verdict: "behavioural", changeType: after ? "added" : "removed" }));
     }
@@ -134,7 +165,41 @@ export async function compareCode({ file, language, fileClass, component }: Code
   if (residue) units.push(unit(basename(path), { unitKind: "file", ...residue }));
 
   const lineOf = (u: Unit) => u.span.head?.[0] ?? u.span.base?.[0] ?? 0;
-  return { units: units.sort((a, b) => lineOf(a) - lineOf(b) || a.id.localeCompare(b.id)) };
+  return { units: units.sort((a, b) => lineOf(a) - lineOf(b) || a.id.localeCompare(b.id)), degraded };
+}
+
+type Region = "signature" | "condition" | "body";
+
+/** Where a changed token sits in its declaration. */
+function regionOf(spec: LanguageSpec, tree: Tree, declaration: Declaration, token: Token): Region {
+  if (token.start < declaration.bodyStart) return "signature";
+  for (
+    let node = tree.rootNode.descendantForIndex(token.start, token.end);
+    node && node.id !== declaration.node.id && node.startIndex >= declaration.start;
+    node = node.parent
+  ) {
+    if (node.parent?.childForFieldName("condition")?.id === node.id || spec.isCondition(node)) return "condition";
+  }
+  return "body";
+}
+
+/**
+ * From the token diff (§3.4): any change before the body makes it a signature change; changes that
+ * all sit in conditions make it a condition change; anything else is a body change.
+ */
+function changeTypeOf(spec: LanguageSpec, baseTree: Tree, before: Side, headTree: Tree, after: Side): ChangeType {
+  const diff = diffTokens(
+    before.tokens.map((t) => t.text),
+    after.tokens.map((t) => t.text),
+  );
+  if (!diff) return "bodyChanged";
+  const regions = [
+    ...diff.deleted.map((i) => regionOf(spec, baseTree, before.declaration, before.tokens[i])),
+    ...diff.inserted.map((i) => regionOf(spec, headTree, after.declaration, after.tokens[i])),
+  ];
+  if (regions.includes("signature")) return "signatureChanged";
+  if (regions.length > 0 && regions.every((r) => r === "condition")) return "conditionChanged";
+  return "bodyChanged";
 }
 
 type Residue = ReadFile["residue"];

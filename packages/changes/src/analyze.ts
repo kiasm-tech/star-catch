@@ -36,6 +36,10 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
       entry.error = compared.error;
     } else {
       units.push(...compared.units);
+      if (compared.degraded) {
+        entry.degraded = true;
+        entry.error = "parse errors in a changed declaration";
+      }
     }
   }
 
