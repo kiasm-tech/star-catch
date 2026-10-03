@@ -1,21 +1,17 @@
 import { loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
-import { java } from "../languages/java/language.js";
-import { python } from "../languages/python/language.js";
-import { typescript } from "../languages/typescript/language.js";
-import type { LanguageSpec } from "../languages/spec.js";
+import { SPECS } from "../languages/specs.js";
 import { declarationsOf } from "./declarations.js";
 import { parse, parserFor, type CodeLanguage } from "./parse.js";
 import { hashTokens, ownText, ownTokens, residueText, residueTokens, tokensOf } from "./tokens.js";
 
-const SPECS: Partial<Record<CodeLanguage, LanguageSpec>> = { typescript, tsx: typescript, python, java };
 const later = { deadline: Number.POSITIVE_INFINITY };
 
 /** Each declaration's own tokens and hash, plus the file's tokens and residue. */
 async function read(language: CodeLanguage, source: string) {
   const tree = parse(await parserFor(language), source, later)!;
   try {
-    const tokens = tokensOf(tree, source, SPECS[language]!);
+    const tokens = tokensOf(tree, source, SPECS[language]);
     const declarations = await declarationsOf(tree, language);
     const own = Object.fromEntries(
       declarations.map((d) => {
@@ -108,14 +104,36 @@ describe("hashes on the fixtures", () => {
 });
 
 describe("ownText", () => {
-  it("leaves nested declarations out, so a changed method doesn't change its class's text", async () => {
-    const source = "export class Cart {\n  // items\n  total() { return 1; }\n}\n";
+  async function texts(source: string) {
     const tree = parse(await parserFor("typescript"), source, later)!;
     try {
+      const tokens = tokensOf(tree, source, SPECS.typescript);
       const declarations = await declarationsOf(tree, "typescript");
       const cart = declarations.find((d) => d.qualifiedName === "Cart")!;
-      expect(ownText(source, cart, declarations)).toBe("export class Cart {\n  // items\n  \n}");
-      expect(residueText(source, declarations)).toBe("\n");
+      return { cart: ownText(source, tokens, cart, declarations), residue: residueText(source, tokens, declarations) };
+    } finally {
+      tree.delete();
+    }
+  }
+
+  it("leaves out the gaps that hold nested members, comments in them included", async () => {
+    const one = await texts("import { a } from \"a\";\nexport class Cart {\n  // items\n  total() { return 1; }\n}\n");
+    const two = await texts("import { a } from \"a\";\n\nexport class Cart {\n  // all items\n  total() { return 1; }\n\n  count() {}\n}\nf();\n");
+    expect(one.cart).toBe("export class Cart {\0}");
+    expect(two.cart).toBe(one.cart);
+    expect(one.residue).toBe('import { a } from "a";');
+    expect(two.residue).toBe('import { a } from "a";\0f();');
+  });
+
+  it("keeps formatting and comments elsewhere in its own code", async () => {
+    const base = await texts("class  Cart {\n  total() {}\n}\nfunction f() {\n  // one\n  return 1;\n}\n");
+    expect(base.cart).toBe("class  Cart {\0}");
+    const tree = parse(await parserFor("typescript"), "function f() {\n  // one\n  return 1;\n}\n", later)!;
+    try {
+      const source = "function f() {\n  // one\n  return 1;\n}\n";
+      const tokens = tokensOf(tree, source, SPECS.typescript);
+      const declarations = await declarationsOf(tree, "typescript");
+      expect(ownText(source, tokens, declarations[0], declarations)).toBe("function f() {\n  // one\n  return 1;\n}");
     } finally {
       tree.delete();
     }

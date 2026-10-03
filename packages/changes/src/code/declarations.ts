@@ -1,12 +1,7 @@
 import { Query, type Node, type Tree } from "web-tree-sitter";
-import { java } from "../languages/java/language.js";
-import { javascript } from "../languages/javascript/language.js";
-import { python } from "../languages/python/language.js";
 import type { DeclarationCategory, LanguageSpec } from "../languages/spec.js";
-import { typescript } from "../languages/typescript/language.js";
+import { SPECS } from "../languages/specs.js";
 import { loadLanguage, type CodeLanguage } from "./parse.js";
-
-const SPECS: Record<CodeLanguage, LanguageSpec> = { typescript, tsx: typescript, javascript, python, java };
 
 export interface Declaration {
   /** As written; a test's title. */

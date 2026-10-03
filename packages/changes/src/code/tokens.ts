@@ -71,15 +71,25 @@ function othersIn(declaration: Declaration, declarations: Declaration[]): Range[
   return others.filter((r, i) => !others.slice(0, i).some((o) => o.start <= r.start && r.end <= o.end));
 }
 
-/** A declaration's own text: its span without `othersIn`; formatting and comments included. */
-export function ownText(source: string, declaration: Declaration, declarations: Declaration[]): string {
+/**
+ * The text between tokens, formatting and comments included. A gap that holds one of `skipped`
+ * (a nested declaration) becomes a marker, so adding a member doesn't change its container's text.
+ */
+function textOf(source: string, tokens: Token[], skipped: Range[]): string {
   let text = "";
-  let at = declaration.start;
-  for (const range of othersIn(declaration, declarations)) {
-    text += source.slice(at, Math.max(at, range.start));
-    at = Math.max(at, range.end);
-  }
-  return text + source.slice(at, declaration.end);
+  tokens.forEach((token, i) => {
+    const next = tokens[i + 1];
+    text += token.text;
+    if (!next) return;
+    const holds = skipped.some((r) => token.end <= r.start && r.end <= next.start);
+    text += holds ? "\0" : source.slice(token.end, next.start);
+  });
+  return text;
+}
+
+/** A declaration's own text: what `ownTokens` covers, formatting and comments included. */
+export function ownText(source: string, tokens: Token[], declaration: Declaration, declarations: Declaration[]): string {
+  return textOf(source, ownTokens(tokens, declaration, declarations), othersIn(declaration, declarations));
 }
 
 /** A declaration's own tokens: those in its span, minus `othersIn`. */
@@ -98,15 +108,9 @@ export function residueTokens(tokens: Token[], declarations: Declaration[]): Tok
   return tokens.filter((t) => !declarations.some((d) => d.start <= t.start && t.end <= d.end));
 }
 
-/** The residue's text, formatting and comments included. */
-export function residueText(source: string, declarations: Declaration[]): string {
-  let text = "";
-  let at = 0;
-  for (const d of [...declarations].sort((a, b) => a.start - b.start)) {
-    text += source.slice(at, Math.max(at, d.start));
-    at = Math.max(at, d.end);
-  }
-  return text + source.slice(at);
+/** The residue's text, formatting and comments included; declarations become markers. */
+export function residueText(source: string, tokens: Token[], declarations: Declaration[]): string {
+  return textOf(source, residueTokens(tokens, declarations), declarations);
 }
 
 /** sha1 of the token texts joined with \0. */

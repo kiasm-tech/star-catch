@@ -10,6 +10,8 @@ export interface Budget {
   aborted(): boolean;
   /** Past the analysis deadline, or the caller aborted. */
   expired(): boolean;
+  /** A deadline for one file: its own budget, within what's left of the analysis. */
+  forFile(): { deadline: number; now: () => number };
 }
 
 /** Starts the analysis clock. `now` is injectable so tests never sleep. */
@@ -24,5 +26,6 @@ export function createBudget(budgets: Budgets = {}, signal?: AbortSignal, now: (
     remainingMs,
     aborted,
     expired: () => aborted() || remainingMs() === 0,
+    forFile: () => ({ deadline: now() + Math.min(limits.perFileMs, remainingMs()), now }),
   };
 }

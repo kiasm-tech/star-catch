@@ -21,6 +21,14 @@ describe("createBudget", () => {
     expect([budget.remainingMs(), budget.expired()]).toEqual([0, true]);
   });
 
+  it("gives a file its own budget, within what's left of the analysis", () => {
+    const { now, advance } = clock();
+    const budget = createBudget({ perFileMs: 50, analysisMs: 100 }, undefined, now);
+    expect(budget.forFile().deadline - now()).toBe(50);
+    advance(80);
+    expect(budget.forFile().deadline - now()).toBe(20);
+  });
+
   it("expires as soon as the caller aborts", () => {
     const controller = new AbortController();
     const budget = createBudget({}, controller.signal, clock().now);
