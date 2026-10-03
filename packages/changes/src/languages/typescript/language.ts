@@ -1,4 +1,4 @@
-import { TEST_CASES, TOP_LEVEL_VARIABLES, cStyleCondition, literalTitle } from "../javascript/language.js";
+import { LOCAL_BINDINGS, TEST_CASES, TOP_LEVEL_VARIABLES, cStyleCondition, literalTitle } from "../javascript/language.js";
 import type { LanguageSpec } from "../spec.js";
 
 /** For both grammars, typescript and tsx: JavaScript's declarations plus the type-level ones. */
@@ -22,4 +22,8 @@ ${TEST_CASES}`,
   leading: ["decorator"],
   testName: literalTitle,
   isCondition: cStyleCondition,
+  bindings: `
+(required_parameter pattern: (identifier) @bind)
+(optional_parameter pattern: (identifier) @bind)
+${LOCAL_BINDINGS}`,
 };

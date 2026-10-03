@@ -56,7 +56,7 @@ type Range = { start: number; end: number };
  * What isn't a declaration's own: the declarations nested in it (each is its own unit) and
  * siblings declared in the same statement (`const a = 1, b = 2`). Sorted, non-overlapping.
  */
-function othersIn(declaration: Declaration, declarations: Declaration[]): Range[] {
+export function othersIn(declaration: Declaration, declarations: Declaration[]): Range[] {
   const others: Range[] = [];
   for (const other of declarations) {
     if (other === declaration) continue;
@@ -111,6 +111,13 @@ export function residueTokens(tokens: Token[], declarations: Declaration[]): Tok
 /** The residue's text, formatting and comments included; declarations become markers. */
 export function residueText(source: string, tokens: Token[], declarations: Declaration[]): string {
   return textOf(source, residueTokens(tokens, declarations), declarations);
+}
+
+/** The tokens that lie within [start, end). */
+export function tokensIn(tokens: Token[], start: number, end: number): Token[] {
+  const inside: Token[] = [];
+  for (let i = firstAtOrAfter(tokens, start); i < tokens.length && tokens[i].end <= end; i++) inside.push(tokens[i]);
+  return inside;
 }
 
 /** sha1 of the token texts joined with \0. */

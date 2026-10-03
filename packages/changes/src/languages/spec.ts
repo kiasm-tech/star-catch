@@ -20,4 +20,6 @@ export interface LanguageSpec {
    * operators, case values, Python's `a if cond else b` (changes.md §3.4).
    */
   isCondition(node: Node): boolean;
+  /** Captures `@bind` on names a declaration binds itself: parameters and local variables. */
+  bindings: string;
 }

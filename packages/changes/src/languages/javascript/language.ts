@@ -27,6 +27,13 @@ export function cStyleCondition(node: Node): boolean {
   return node.parent?.type === "switch_case" && node.parent.childForFieldName("value")?.id === node.id;
 }
 
+/** Locals in both TypeScript and JavaScript; their parameters are written differently. */
+export const LOCAL_BINDINGS = `
+(arrow_function parameter: (identifier) @bind)
+(variable_declarator name: (identifier) @bind)
+(catch_clause parameter: (identifier) @bind)
+`;
+
 /** A string title without quotes; a template title only when it has no substitutions. */
 export function literalTitle(title: Node): string | null {
   if (title.type === "template_string" && title.namedChildren.some((c) => c?.type === "template_substitution")) {
@@ -48,4 +55,8 @@ ${TEST_CASES}`,
   leading: ["decorator"],
   testName: literalTitle,
   isCondition: cStyleCondition,
+  bindings: `
+(formal_parameters (identifier) @bind)
+(assignment_pattern left: (identifier) @bind)
+${LOCAL_BINDINGS}`,
 };

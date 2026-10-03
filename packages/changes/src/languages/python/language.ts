@@ -36,4 +36,12 @@ export const python: LanguageSpec = {
   testName: () => null,
   isDocstring,
   isCondition,
+  bindings: `
+(parameters (identifier) @bind)
+(default_parameter name: (identifier) @bind)
+(typed_parameter (identifier) @bind)
+(typed_default_parameter name: (identifier) @bind)
+(assignment left: (identifier) @bind)
+(for_statement left: (identifier) @bind)
+`,
 };

@@ -20,4 +20,10 @@ export const java: LanguageSpec = {
   testName: () => null,
   // A case value sits in a switch_label.
   isCondition: (node) => cStyleCondition(node) || node.type === "switch_label",
+  bindings: `
+(formal_parameter name: (identifier) @bind)
+(variable_declarator name: (identifier) @bind)
+(enhanced_for_statement name: (identifier) @bind)
+(catch_formal_parameter name: (identifier) @bind)
+`,
 };

@@ -1,8 +1,9 @@
 import { MAX_UNIT_CODE_CHARS, type ChangeType } from "@kiasm-tech/star-catch-contracts";
-import type { Tree } from "web-tree-sitter";
+import type { Query, Tree } from "web-tree-sitter";
 import type { LanguageSpec } from "../languages/spec.js";
 import { SPECS } from "../languages/specs.js";
 import { MAX_REFERENCES, type AnalyzeInput, type FileClass, type Unit } from "../schema.js";
+import { bindingsOf, bindingsQuery, bodyOf, type Body } from "./bodies.js";
 import { declarationsOf, type Declaration } from "./declarations.js";
 import { diffTokens } from "./diff.js";
 import { parse, parserFor, type CodeLanguage, type ParseBudget } from "./parse.js";
@@ -26,6 +27,8 @@ interface Side {
 
 interface ReadFile {
   tree: Tree;
+  tokens: Token[];
+  found: Declaration[];
   declarations: Map<string, Side>;
   residue: { hash: string; text: string; empty: boolean; tokens: Token[] };
 }
@@ -57,6 +60,8 @@ async function readSide(language: CodeLanguage, source: string, budget: ParseBud
     const residue = residueTokens(tokens, found);
     return {
       tree,
+      tokens,
+      found,
       declarations,
       residue: { hash: hashTokens(residue), text: residueText(source, tokens, found), empty: residue.length === 0, tokens: residue },
     };
@@ -91,10 +96,15 @@ export interface CodeFile {
   component: string;
 }
 
-/** A unit's own tokens on each side, for refactoring detection across files. */
+/** What refactoring detection needs of a unit, on each side, read while the trees lived. */
 export interface UnitTokens {
   base?: Token[];
   head?: Token[];
+  baseBody?: Body;
+  headBody?: Body;
+  /** Names the declaration binds itself: parameters and locals. */
+  baseBindings?: Set<string>;
+  headBindings?: Set<string>;
 }
 
 /** `degraded` when a changed declaration overlaps a parse error. `tokens` is keyed by unit id. */
@@ -118,7 +128,7 @@ export async function compareCode({ file, language, fileClass, component }: Code
   try {
     head = needsHead ? await readSide(language, file.head!, budget) : null;
     if ((needsBase && !base) || (needsHead && !head)) return { error: "parsing took longer than its budget" };
-    return unitsOf(file.path, { language, fileClass, component }, base, head);
+    return unitsOf(file.path, { language, fileClass, component }, base, head, await bindingsQuery(language));
   } finally {
     base?.tree.delete();
     head?.tree.delete();
@@ -130,6 +140,7 @@ function unitsOf(
   { language, fileClass, component }: Omit<CodeFile, "file">,
   base: ReadFile | null,
   head: ReadFile | null,
+  bindings: Query,
 ): CompareResult {
   const spec = SPECS[language];
   let degraded = false;
@@ -154,7 +165,14 @@ function unitsOf(
     const before = base?.declarations.get(name);
     const after = head?.declarations.get(name);
     if (before && after && before.hash === after.hash && before.ownText === after.ownText) continue;
-    tokens.set(`${path}#${name}`, { base: before?.tokens, head: after?.tokens });
+    tokens.set(`${path}#${name}`, {
+      base: before?.tokens,
+      head: after?.tokens,
+      baseBody: before && bodyOf(before.declaration.node, base!.tokens),
+      headBody: after && bodyOf(after.declaration.node, head!.tokens),
+      baseBindings: before && bindingsOf(bindings, before.declaration, base!.found),
+      headBindings: after && bindingsOf(bindings, after.declaration, head!.found),
+    });
     const shared = {
       unitKind: "declaration" as const,
       before: clip(before?.code),
