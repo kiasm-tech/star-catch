@@ -2,6 +2,7 @@ import { LABEL_SET_VERSION } from "@kiasm-tech/star-catch-contracts";
 import { createBudget } from "./budget.js";
 import { compareCode } from "./code/compare.js";
 import { isCodeLanguage } from "./code/parse.js";
+import { explainRefactorings, familyOf, type Candidate } from "./code/refactorings.js";
 import { defaultComponentOf } from "./component.js";
 import { languageOf } from "./languages/registry.js";
 import { ANALYZER_VERSION, AnalyzeInputSchema, type AnalyzeInput, type AnalyzeOptions, type ChangeSet } from "./schema.js";
@@ -15,7 +16,7 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
 
   const analysed: ChangeSet["files"] = [];
   const excluded: ChangeSet["excluded"] = [];
-  const units: ChangeSet["units"] = [];
+  const candidates: Candidate[] = [];
   for (const file of files) {
     const result = triage(file);
     if ("excluded" in result) {
@@ -35,7 +36,9 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
       entry.degraded = true;
       entry.error = compared.error;
     } else {
-      units.push(...compared.units);
+      for (const unit of compared.units) {
+        candidates.push({ unit, family: familyOf(language), tokens: compared.tokens.get(unit.id) });
+      }
       if (compared.degraded) {
         entry.degraded = true;
         entry.error = "parse errors in a changed declaration";
@@ -43,6 +46,7 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
     }
   }
 
+  const { units, refactorings } = explainRefactorings(candidates);
   const elapsed = budget.elapsedMs();
   return {
     analyzerVersion: ANALYZER_VERSION,
@@ -51,7 +55,7 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
     truncated: false,
     files: analysed,
     units,
-    refactorings: [],
+    refactorings,
     links: [],
     entryPoints: [],
     excluded,
