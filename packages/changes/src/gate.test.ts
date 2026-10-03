@@ -10,6 +10,7 @@ const PASSING: string[] = [
   "03-rename-only",
   "04-lockfile-only",
   "05-condition-change",
+  "06-config-key",
   "08-ui-with-test",
   "09-ts-extract",
   "10-python-rename",
