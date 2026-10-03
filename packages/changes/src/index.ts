@@ -32,3 +32,4 @@ export {
   type UnitItem,
   type UnitResult,
 } from "./classify/schema.js";
+export { ruleLabels, structuralLabels } from "./classify/rules.js";
