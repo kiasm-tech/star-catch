@@ -29,7 +29,7 @@ describe("cli fixtures", () => {
   it("passes on the repository's fixtures", async () => {
     expect(await run(["fixtures"], mockEnv(), io)).toBe(0);
     expect(out.at(-1)).toMatch(/^(\d+)\/\1 fixtures ok$/);
-    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(13);
+    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(14);
   });
 
   it("fails and names the fixture when a patch is wrong", async () => {

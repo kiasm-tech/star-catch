@@ -1,0 +1,22 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 114,
+    "headSha": "696c0e36148f213ed5403a2859edf3ecdf9acc90"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "src/i18n/greeting.ts#farewell",
+      "file": "src/i18n/greeting.ts",
+      "name": "farewell",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "bodyChanged",
+      "refactorings": [],
+      "before": "export function farewell(name: string): string {\n  return `Tschüss ${name}`;\n}",
+      "after": "export function farewell(name: string): string {\n  return `Tschüss ${name} 🍰, bis bald`;\n}"
+    }
+  ],
+  "excluded": []
+}

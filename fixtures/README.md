@@ -51,3 +51,4 @@ the contracts, the patch counts, and that each patch turns the base content into
 | 11-python-condition | Python threshold changed → behavioural, conditionChanged |
 | 12-python-extract | Python method extracted → structural, extract |
 | 13-java-extract-move | Java method extracted, another moved to another class → structural, extract and move |
+| 14-non-ascii | A TS function after umlauts and emoji changed → its before/after cut exactly (string indexes, not bytes) |
