@@ -26,7 +26,7 @@ const ALLOWED: Record<string, string[]> = {
 /** Packages that must stay free of I/O, and the only modules they may import. */
 const PURE: Record<string, string[]> = {
   "packages/contracts": ["zod"],
-  "packages/changes": ["zod", CONTRACTS, "node:crypto"],
+  "packages/changes": ["zod", CONTRACTS, "node:crypto", "web-tree-sitter"],
   "packages/pipeline": ["zod", CONTRACTS],
 };
 
