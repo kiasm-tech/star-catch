@@ -6,3 +6,4 @@ export {
   loadSyntheticFixtures,
   type SyntheticFixture,
 } from "./fixtures.js";
+export { freshDatabase, type TestDatabase } from "./postgres.js";

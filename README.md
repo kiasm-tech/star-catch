@@ -13,7 +13,12 @@ pnpm install
 pnpm test && pnpm typecheck && pnpm lint
 pnpm cli fixtures                                         # check every fixture
 GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
+docker compose up -d --wait                               # local Postgres
+DATABASE_URL=postgres://star_catch:star_catch@localhost:5432/star_catch pnpm cli migrate
 ```
+
+Node 22.12 or later. Tests need Docker running: they start their own Postgres
+(`STAR_CATCH_TEST_DATABASE_URL` points them at an existing server instead).
 
 Dependency rules: [test/architecture.test.ts](test/architecture.test.ts), mirrored in ESLint.
 
