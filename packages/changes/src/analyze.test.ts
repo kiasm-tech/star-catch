@@ -18,7 +18,7 @@ describe("analyze", () => {
       files: [
         file("src/cart.ts"),
         file("pnpm-lock.yaml"),
-        file("config/flags.json"),
+        file("config/flags.json", '{ "a": 1 }\n'),
         file("assets/logo.png", "\u0000"),
         file("tests/cart.test.ts"),
       ],

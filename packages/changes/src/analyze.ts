@@ -6,6 +6,7 @@ import { explainRefactorings, familyOf, type Candidate } from "./code/refactorin
 import { defaultComponentOf } from "./component.js";
 import { languageOf } from "./languages/registry.js";
 import { ANALYZER_VERSION, AnalyzeInputSchema, type AnalyzeInput, type AnalyzeOptions, type ChangeSet } from "./schema.js";
+import { compareStructured, readsStructured } from "./structured/compare.js";
 import { triage } from "./triage.js";
 
 /** A pull request's files → change units (changes.md §7). Classification is task 06. */
@@ -26,6 +27,16 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
     const { language, engine } = languageOf(file.path);
     const entry: ChangeSet["files"][number] = { path: file.path, language, fileClass: result.fileClass, engine, degraded: false };
     analysed.push(entry);
+    if (engine === "structured" && readsStructured(language, result.fileClass)) {
+      const structured = compareStructured({ file, language, fileClass: result.fileClass, component: componentOf(file.path) });
+      if ("error" in structured) {
+        entry.degraded = true;
+        entry.error = structured.error;
+      } else {
+        for (const unit of structured.units) candidates.push({ unit, family: language });
+      }
+      continue;
+    }
     if (engine !== "code" || !isCodeLanguage(language)) continue;
 
     const compared = await compareCode(
