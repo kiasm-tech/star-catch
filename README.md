@@ -12,6 +12,7 @@ This repository is the backend: it receives GitHub's webhooks, analyses pull req
 pnpm install
 pnpm test && pnpm typecheck && pnpm lint
 pnpm cli fixtures                                         # check every fixture
+pnpm cli analyze fixtures/synthetic/09-ts-extract          # a fixture's change units
 GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
 docker compose up -d --wait                               # local Postgres
 DATABASE_URL=postgres://star_catch:star_catch@localhost:5432/star_catch pnpm cli migrate

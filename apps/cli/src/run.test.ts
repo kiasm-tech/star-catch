@@ -121,3 +121,26 @@ describe("cli replay", () => {
     expect(err[0]).toMatch(/GITHUB_WEBHOOK_SECRET/);
   });
 });
+
+describe("cli analyze", () => {
+  it("prints a fixture's change set, and a line per unit to stderr", async () => {
+    expect(await run(["analyze", path.join(dir, "synthetic", "09-ts-extract")], mockEnv(), io)).toBe(0);
+    const changes = JSON.parse(out.join("\n"));
+    expect(changes.refactorings).toEqual([expect.objectContaining({ type: "extract", description: "orderTotal extracted from receiptLines" })]);
+    expect(err).toEqual([
+      "structural  added            src/orders/receipt.ts#orderTotal [extract]",
+      "structural  bodyChanged      src/orders/receipt.ts#receiptLines [extract]",
+      expect.stringMatching(/^2 units in \d+ ms$/),
+    ]);
+  });
+
+  it("reads a snapshot file too", async () => {
+    expect(await run(["analyze", path.join(dir, "snapshots", "pmndrs__zustand__3469.json")], mockEnv(), io)).toBe(0);
+    expect(JSON.parse(out.join("\n")).units.length).toBeGreaterThan(0);
+  });
+
+  it("fails on a path that doesn't exist and needs exactly one", async () => {
+    expect(await run(["analyze", path.join(dir, "nope")], mockEnv(), io)).toBe(1);
+    expect(await run(["analyze"], mockEnv(), io)).toBe(2);
+  });
+});
