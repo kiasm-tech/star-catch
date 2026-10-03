@@ -41,7 +41,7 @@ A **change unit** is the smallest named thing that changed.
 
 | Verdict | When | Where it goes |
 |---|---|---|
-| **Not a change** | Only whitespace, formatting or comments differ; or the file is a lockfile, generated, vendored or binary | Recorded, left out of the context |
+| **Not a change** | Only whitespace, formatting or comments differ; or the file is a lockfile, generated, vendored or binary | Recorded in the context (excluded files in `excluded`), unclassified: no labels, in no concern or fact |
 | **Structural** | The unit differs only by a detected refactoring — rename, move, extract, inline — so behaviour is preserved | Into the context, tagged structural. Feeds the technical cut's *Structure change*; never the business cut |
 | **Behavioural** | Anything else | Into the context |
 
