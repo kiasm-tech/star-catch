@@ -6,6 +6,7 @@ import { explainRefactorings, familyOf, type Candidate } from "./code/refactorin
 import { defaultComponentOf } from "./component.js";
 import { fallbackUnit, type FallbackFile } from "./fallback.js";
 import { languageOf, type Engine } from "./languages/registry.js";
+import { linksOf } from "./links.js";
 import { ANALYZER_VERSION, AnalyzeInputSchema, type AnalyzeInput, type AnalyzeOptions, type ChangeSet } from "./schema.js";
 import { compareStructured, readsStructured } from "./structured/compare.js";
 import { triage } from "./triage.js";
@@ -83,7 +84,7 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
     files: analysed,
     units,
     refactorings,
-    links: [],
+    links: linksOf(units, files.slice(0, MAX_FILES)),
     entryPoints: [],
     excluded,
     timings: { totalMs: elapsed, analysisMs: elapsed, classifyMs: 0 },
