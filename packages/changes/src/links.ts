@@ -90,7 +90,8 @@ export function linksOf(units: Unit[], files: AnalyzeInput["files"]): Link[] {
     // A test file's own import lines (its residue unit) aren't a test.
     const imported = isTest(from) && from.unitKind === "declaration" ? importsByFile.get(from.file) ?? [] : [];
     for (const to of targets) {
-      if (isTest(to) && isTest(from)) continue;
+      // Nothing calls or covers a test case, even one named like the code it tests.
+      if (isTest(to)) continue;
       const named = references.has(simpleName(to.name));
       if (named || (imported.length > 0 && imports(imported, to.file))) add(from, to, isTest(from) ? "covers" : "calls");
     }
