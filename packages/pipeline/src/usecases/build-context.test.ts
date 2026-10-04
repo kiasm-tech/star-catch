@@ -1,4 +1,4 @@
-import { mockClassifier } from "@star-catch/changes";
+import { mockClassifier, type Classifier, type LabelCache, type StoredLabels } from "@star-catch/changes";
 import { expectContextMatches, loadRecordedSnapshots, loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
 import { buildContext } from "./build-context.js";
@@ -40,3 +40,37 @@ describe("buildContext", () => {
     },
   );
 });
+
+describe("buildContext with a label cache and a budget", () => {
+  const snapshot = () => loadSyntheticFixtures().find((f) => f.name === "08-ui-with-test")!.snapshot;
+
+  function memoryCache(): LabelCache & { rows: Map<string, StoredLabels> } {
+    const rows = new Map<string, StoredLabels>();
+    return {
+      rows,
+      get: async (hashes) => new Map(hashes.filter((h) => rows.has(h)).map((h) => [h, rows.get(h)!])),
+      put: async (entries) => void entries.forEach((e) => rows.set(e.inputHash, e)),
+    };
+  }
+
+  it("labels from the cache the second time, without asking the classifier", async () => {
+    const labelCache = memoryCache();
+    const first = await buildContext(snapshot(), { classifier: mockClassifier, labelCache });
+    expect(labelCache.rows.size).toBe(first.units.filter((u) => u.verdict === "behavioural").length + first.sentences.length);
+    const failing: Classifier = { id: mockClassifier.id, classify: async () => Promise.reject(new Error("not called")) };
+    expect(await buildContext(snapshot(), { classifier: failing, labelCache })).toEqual(first);
+  });
+
+  it("leaves units and sentences unlabelled when the classifier runs out of time, and still groups them", async () => {
+    const stuck: Classifier = {
+      id: "stuck",
+      classify: (_items, signal) => new Promise((_resolve, reject) => signal?.addEventListener("abort", () => reject(signal.reason))),
+    };
+    const context = await buildContext(snapshot(), { classifier: stuck }, { budgetMs: 20 });
+    expect(context.units.map((u) => u.labels)).toEqual([undefined, undefined]);
+    expect(context.sentences.every((s) => s.class === undefined)).toBe(true);
+    expect(context.concerns.map((c) => c.unitIds.length)).toEqual([2]);
+    expect(context.facts.map((f) => f.group)).not.toContain("intent");
+  });
+});
+

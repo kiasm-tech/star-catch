@@ -35,5 +35,7 @@ export { analyzeChanges } from "./usecases/analyze-changes.js";
 export { numbersIn, sentencesOf, splitSentences } from "./text.js";
 export { concernsOf } from "./group.js";
 export { factsOf, type FactInput } from "./facts.js";
-export { buildContext, type ContextPorts } from "./usecases/build-context.js";
+export { buildContext, type ContextOptions, type ContextPorts } from "./usecases/build-context.js";
+export { mockClassifier, modelClassifier } from "./classifier.js";
+export type { Classifier, LabelCache } from "@star-catch/changes";
 export type { Llm, LlmRequest } from "./ports/llm.js";
