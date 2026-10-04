@@ -9,12 +9,14 @@ const CONTRACTS = "@kiasm-tech/star-catch-contracts";
 const PIPELINE = "@star-catch/pipeline";
 const ADAPTERS = "@star-catch/adapters";
 const TESTKIT = "@star-catch/testkit";
+const CHANGES = "@star-catch/changes";
 
-/** Dependencies point inward: apps → adapters → core (pipeline) → contracts. */
+/** Dependencies point inward: apps → adapters → core (pipeline) → domain (changes) → contracts. */
 const ALLOWED: Record<string, string[]> = {
   [CONTRACTS]: [],
   [TESTKIT]: [CONTRACTS],
-  [PIPELINE]: [CONTRACTS],
+  [CHANGES]: [CONTRACTS],
+  [PIPELINE]: [CONTRACTS, CHANGES],
   [ADAPTERS]: [CONTRACTS, PIPELINE],
   "@star-catch/cli": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/intake": [CONTRACTS, PIPELINE, ADAPTERS],
@@ -24,7 +26,22 @@ const ALLOWED: Record<string, string[]> = {
 /** Packages that must stay free of I/O, and the only modules they may import. */
 const PURE: Record<string, string[]> = {
   "packages/contracts": ["zod"],
-  "packages/pipeline": ["zod", CONTRACTS],
+  "packages/changes": [
+    "zod",
+    CONTRACTS,
+    "node:crypto",
+    "web-tree-sitter",
+    "jsonc-parser",
+    "yaml",
+    "smol-toml",
+    "fast-xml-parser",
+  ],
+  "packages/pipeline": ["zod", CONTRACTS, CHANGES],
+};
+
+/** Single files of a pure package that may also import these. */
+const PURE_EXCEPTIONS: Record<string, string[]> = {
+  "packages/changes/src/languages/grammar-files.ts": ["node:fs/promises"],
 };
 
 interface Manifest {
@@ -73,6 +90,7 @@ describe("architecture", () => {
       const specifiers = [...text.matchAll(/(?:from|import)\s+"([^"]+)"/g)].map((m) => m[1] ?? "");
       return specifiers
         .filter((s) => !s.startsWith(".") && !allowed.includes(s))
+        .filter((s) => !PURE_EXCEPTIONS[path.relative(root, file)]?.includes(s))
         .map((s) => `${path.relative(root, file)} imports ${s}`);
     });
     expect(offending).toEqual([]);

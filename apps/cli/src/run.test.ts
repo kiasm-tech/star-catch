@@ -29,7 +29,7 @@ describe("cli fixtures", () => {
   it("passes on the repository's fixtures", async () => {
     expect(await run(["fixtures"], mockEnv(), io)).toBe(0);
     expect(out.at(-1)).toMatch(/^(\d+)\/\1 fixtures ok$/);
-    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(13);
+    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(14);
   });
 
   it("fails and names the fixture when a patch is wrong", async () => {
@@ -119,5 +119,28 @@ describe("cli replay", () => {
   it("asks for the secret", async () => {
     expect(await run(["replay", "webhook.json"], mockEnv(), io)).toBe(2);
     expect(err[0]).toMatch(/GITHUB_WEBHOOK_SECRET/);
+  });
+});
+
+describe("cli analyze", () => {
+  it("prints a fixture's change set, and a line per unit to stderr", async () => {
+    expect(await run(["analyze", path.join(dir, "synthetic", "09-ts-extract")], mockEnv(), io)).toBe(0);
+    const changes = JSON.parse(out.join("\n"));
+    expect(changes.refactorings).toEqual([expect.objectContaining({ type: "extract", description: "orderTotal extracted from receiptLines" })]);
+    expect(err).toEqual([
+      "structural  added            src/orders/receipt.ts#orderTotal [extract]",
+      "structural  bodyChanged      src/orders/receipt.ts#receiptLines [extract]",
+      expect.stringMatching(/^2 units in \d+ ms$/),
+    ]);
+  });
+
+  it("reads a snapshot file too", async () => {
+    expect(await run(["analyze", path.join(dir, "snapshots", "pmndrs__zustand__3469.json")], mockEnv(), io)).toBe(0);
+    expect(JSON.parse(out.join("\n")).units.length).toBeGreaterThan(0);
+  });
+
+  it("fails on a path that doesn't exist and needs exactly one", async () => {
+    expect(await run(["analyze", path.join(dir, "nope")], mockEnv(), io)).toBe(1);
+    expect(await run(["analyze"], mockEnv(), io)).toBe(2);
   });
 });

@@ -1,5 +1,5 @@
 export { snapshotOf } from "./builders.js";
-export { expectContextMatches } from "./match.js";
+export { expectChangesMatch, expectContextMatches, type ChangesLike } from "./match.js";
 export {
   FIXTURES_DIR,
   loadRecordedSnapshots,

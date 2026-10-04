@@ -10,7 +10,7 @@ describe("fixture loaders", () => {
       .filter((d) => d.isDirectory())
       .map((d) => d.name)
       .sort();
-    expect(fixtures).toHaveLength(13);
+    expect(fixtures).toHaveLength(14);
     expect(fixtures.map((f) => f.name)).toEqual(dirs);
   });
 

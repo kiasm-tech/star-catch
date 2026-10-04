@@ -8,3 +8,5 @@ docs
 study
 *.md
 .env*
+# Generated on install; the image builds its own.
+packages/changes/grammars

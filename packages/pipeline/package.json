@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "@star-catch/changes": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

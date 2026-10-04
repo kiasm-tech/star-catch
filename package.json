@@ -13,7 +13,8 @@
     "cli": "tsx apps/cli/src/main.ts",
     "intake": "tsx apps/intake/src/main.ts",
     "worker": "tsx apps/worker/src/main.ts",
-    "replay": "tsx apps/cli/src/main.ts replay"
+    "replay": "tsx apps/cli/src/main.ts replay",
+    "bench": "tsx packages/changes/bench/run.ts"
   },
   "dependencies": {
     "tsx": "^4.23.5"
@@ -28,5 +29,13 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.0",
     "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "neverBuiltDependencies": [
+      "tree-sitter-java",
+      "tree-sitter-javascript",
+      "tree-sitter-python",
+      "tree-sitter-typescript"
+    ]
   }
 }

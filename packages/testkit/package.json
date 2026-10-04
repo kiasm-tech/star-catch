@@ -7,11 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@kiasm-tech/star-catch-contracts": "workspace:*",
-    "@testcontainers/postgresql": "^12.2.0",
-    "pg": "^8.23.1"
+    "@kiasm-tech/star-catch-contracts": "workspace:*"
   },
   "devDependencies": {
-    "@types/pg": "^8.23.1"
+    "@testcontainers/postgresql": "^12.2.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1"
   }
 }

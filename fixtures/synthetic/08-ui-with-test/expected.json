@@ -19,11 +19,12 @@
       }
     },
     {
-      "id": "app/billing/page.test.tsx#page.test.tsx",
+      "id": "app/billing/page.test.tsx#BillingPage > explains when the plan renews",
       "file": "app/billing/page.test.tsx",
-      "name": "page.test.tsx",
-      "unitKind": "file",
+      "name": "BillingPage > explains when the plan renews",
+      "unitKind": "declaration",
       "verdict": "behavioural",
+      "changeType": "bodyChanged",
       "refactorings": [],
       "labels": {
         "kind": "test"
@@ -32,7 +33,7 @@
   ],
   "links": [
     {
-      "from": "app/billing/page.test.tsx#page.test.tsx",
+      "from": "app/billing/page.test.tsx#BillingPage > explains when the plan renews",
       "to": "app/billing/page.tsx#BillingPage",
       "type": "covers"
     }

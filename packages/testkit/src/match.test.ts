@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Context } from "@kiasm-tech/star-catch-contracts";
-import { expectContextMatches } from "./match.js";
+import { expectChangesMatch, expectContextMatches, type ChangesLike } from "./match.js";
 
 const actual = {
   version: 1,
@@ -82,5 +82,43 @@ describe("expectContextMatches", () => {
     expect(mismatch({ units: [{ id: "a.ts#fmt", refactorings: [] }, { id: "a.ts#run" }] })).toBe(
       "units[a.ts#fmt].refactorings: expected 0 items, got 1",
     );
+  });
+});
+
+describe("expectChangesMatch", () => {
+  const changes: ChangesLike = {
+    truncated: false,
+    units: [
+      { id: "a.ts#run", verdict: "behavioural", fileClass: "source", span: { head: [1, 3] }, references: [] },
+    ],
+    excluded: [{ file: "pnpm-lock.yaml", reason: "lockfile" }],
+  };
+  const differs = (expected: object) => {
+    try {
+      expectChangesMatch(changes, expected);
+      return null;
+    } catch (error) {
+      return (error as Error).message;
+    }
+  };
+
+  it("checks units, excluded files and truncation, ignoring fields the expectation leaves out", () => {
+    const expected = {
+      units: [{ id: "a.ts#run", verdict: "behavioural" }],
+      excluded: [{ file: "pnpm-lock.yaml" }],
+      truncated: false,
+    };
+    expect(differs(expected)).toBeNull();
+    expect(differs({ truncated: true })).toBe("truncated: expected true, got false");
+    expect(differs({ units: [] })).toBe("units: expected 0 items, got 1");
+    expect(differs({ excluded: [{ file: "pnpm-lock.yaml", reason: "binary" }] })).toBe(
+      "excluded[pnpm-lock.yaml].reason: expected binary, got lockfile",
+    );
+  });
+
+  it("leaves what a later stage decides to the later stage", () => {
+    const later = { pr: { number: 9 }, links: [{ from: "x", to: "y", type: "calls" }], entryPoints: [{ unitId: "x" }] };
+    expect(differs(later)).toBeNull();
+    expect(differs({ units: [{ id: "a.ts#run", labels: { kind: "logic" } }] })).toBeNull();
   });
 });

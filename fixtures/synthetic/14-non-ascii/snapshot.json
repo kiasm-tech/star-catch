@@ -1,0 +1,39 @@
+{
+  "fullName": "acme/shop",
+  "number": 114,
+  "url": "https://github.com/acme/shop/pull/114",
+  "title": "feat(i18n): say when we'll see a customer again",
+  "body": "The farewell now promises to see customers again soon. The emoji and umlauts around it check that unit text is cut at the right places.",
+  "author": "acme-dev",
+  "state": "open",
+  "merged": false,
+  "baseRef": "main",
+  "headRef": "feat/farewell",
+  "baseSha": "a32ddf83c979687e1d89d9c3903bef7a59a92bda",
+  "headSha": "696c0e36148f213ed5403a2859edf3ecdf9acc90",
+  "createdAt": "2026-10-03T09:00:00Z",
+  "updatedAt": "2026-10-03T09:30:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-10-03T09:31:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "src/i18n/greeting.ts",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -4,5 +4,5 @@ export function greeting(name: string): string {\n }\n \n export function farewell(name: string): string {\n-  return `Tschüss ${name}`;\n+  return `Tschüss ${name} 🍰, bis bald`;\n }",
+      "baseContent": "// Grüße für unsere Kundschaft 👋\nexport function greeting(name: string): string {\n  return `Hallo ${name} 👋`;\n}\n\nexport function farewell(name: string): string {\n  return `Tschüss ${name}`;\n}\n",
+      "headContent": "// Grüße für unsere Kundschaft 👋\nexport function greeting(name: string): string {\n  return `Hallo ${name} 👋`;\n}\n\nexport function farewell(name: string): string {\n  return `Tschüss ${name} 🍰, bis bald`;\n}\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "696c0e36148f213ed5403a2859edf3ecdf9acc90",
+      "message": "feat(i18n): say when we'll see a customer again"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}

@@ -1,6 +1,8 @@
 /** Builds a pull request snapshot from the GitHub API, translating GitHub's shapes into the contract's. */
 import type { Octokit } from "@octokit/rest";
 import {
+  BINARY_EXTENSION_PATTERN,
+  LOCKFILE_PATTERN,
   parseLinkedIssueNumbers,
   PullRequestSnapshotSchema,
   SNAPSHOT_LIMITS as LIMITS,
@@ -15,11 +17,6 @@ const PAGINATION_TIMEOUT_MS = 20_000;
 const BLOBS_PER_QUERY = 40;
 const PARALLEL_QUERIES = 4;
 
-// Contents we never fetch; the file entry and its patch are still kept.
-const BINARY_EXT =
-  /\.(png|jpe?g|gif|webp|ico|bmp|pdf|zip|gz|tgz|tar|7z|mp3|mp4|mov|wav|woff2?|ttf|otf|eot|wasm|jar|exe|dll|so|dylib|bin|lockb)$/i;
-const LOCKFILE =
-  /(^|\/)(pnpm-lock\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Pipfile\.lock|go\.sum|Gemfile\.lock|composer\.lock|pubspec\.lock|Podfile\.lock|Package\.resolved|packages\.lock\.json|gradle\.lockfile|mix\.lock|flake\.lock)$/;
 
 const FAILED_CONCLUSIONS = new Set([
   "failure",
@@ -223,7 +220,7 @@ export async function fetchPullRequestSnapshot(
   // Base and head contents of text files, fetched together, then kept in order
   // until the budget runs out.
   const eligible = files.filter(
-    (f) => !BINARY_EXT.test(f.filename) && !LOCKFILE.test(f.filename),
+    (f) => !BINARY_EXTENSION_PATTERN.test(f.filename) && !LOCKFILE_PATTERN.test(f.filename),
   );
   if (eligible.length > LIMITS.contentFiles) truncated = true;
   const toRead = eligible.slice(0, LIMITS.contentFiles);
