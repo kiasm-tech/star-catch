@@ -32,3 +32,4 @@ export { routeDelivery, type Route } from "./webhooks/route.js";
 export { receiveWebhook, type IncomingWebhook, type WebhookOutcome } from "./webhooks/receive-webhook.js";
 export { ingestPullRequest, type IngestDeps, type IngestOutcome } from "./usecases/ingest-pull-request.js";
 export { analyzeChanges } from "./usecases/analyze-changes.js";
+export { numbersIn, sentencesOf, splitSentences } from "./text.js";
