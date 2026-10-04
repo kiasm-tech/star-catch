@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { INTENTS, KINDS, SENTENCE_CLASSES, VISIBILITIES } from "@kiasm-tech/star-catch-contracts";
 import { z } from "zod";
 
@@ -89,3 +90,6 @@ function forStructuredOutputs(node: unknown): unknown {
 
 /** The JSON schema the adapter forces. */
 export const RESPONSE_JSON_SCHEMA = forStructuredOutputs(z.toJSONSchema(ResponseSchema)) as Record<string, unknown>;
+
+/** Changes with the prompt or the schema, so labels cached under an older prompt are not reused. */
+export const PROMPT_ID = `prompt-${createHash("sha256").update(SYSTEM_PROMPT).update(JSON.stringify(RESPONSE_JSON_SCHEMA)).digest("hex").slice(0, 12)}`;

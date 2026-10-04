@@ -39,4 +39,4 @@ export { applyClasses, applyLabels, classifyItems } from "./classify/labels.js";
 export { mockClassifier } from "./classify/mock.js";
 export { DEFAULT_CLASSIFY_MS, classify, inputHash, type ClassifyOptions } from "./classify/classify.js";
 export { createModelClassifier, type Complete, type ModelClassifierOptions } from "./classify/model.js";
-export { RESPONSE_JSON_SCHEMA, SYSTEM_PROMPT } from "./classify/prompt.js";
+export { PROMPT_ID, RESPONSE_JSON_SCHEMA, SYSTEM_PROMPT } from "./classify/prompt.js";
