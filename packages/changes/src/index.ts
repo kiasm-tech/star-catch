@@ -34,3 +34,4 @@ export {
 } from "./classify/schema.js";
 export { ruleLabels, structuralLabels } from "./classify/rules.js";
 export { linksOf, untested } from "./links.js";
+export { entryPointsOf } from "./entry-points.js";
