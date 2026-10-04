@@ -76,6 +76,16 @@ export const ResponseSchema = z.object({
   sentences: z.array(z.object({ id: z.string(), class: z.enum(SENTENCE_CLASSES), confidence })),
 });
 
-/** The JSON schema the adapter forces; without the `$schema` dialect key, which strict modes may reject. */
-export const RESPONSE_JSON_SCHEMA = z.toJSONSchema(ResponseSchema) as Record<string, unknown>;
-delete RESPONSE_JSON_SCHEMA.$schema;
+/** Structured-output modes support a subset of JSON Schema; the zod schema still checks the ranges. */
+function forStructuredOutputs(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(forStructuredOutputs);
+  if (typeof node !== "object" || node === null) return node;
+  return Object.fromEntries(
+    Object.entries(node)
+      .filter(([key]) => !["$schema", "minimum", "maximum"].includes(key))
+      .map(([key, value]) => [key, forStructuredOutputs(value)]),
+  );
+}
+
+/** The JSON schema the adapter forces. */
+export const RESPONSE_JSON_SCHEMA = forStructuredOutputs(z.toJSONSchema(ResponseSchema)) as Record<string, unknown>;
