@@ -34,3 +34,4 @@ export { ingestPullRequest, type IngestDeps, type IngestOutcome } from "./usecas
 export { analyzeChanges } from "./usecases/analyze-changes.js";
 export { numbersIn, sentencesOf, splitSentences } from "./text.js";
 export { buildContext, type ContextPorts } from "./usecases/build-context.js";
+export type { Llm, LlmRequest } from "./ports/llm.js";
