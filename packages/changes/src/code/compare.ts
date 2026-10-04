@@ -196,7 +196,9 @@ function unitsOf(
 
   const residue = residueUnit(base?.residue, head?.residue);
   if (residue) {
-    units.push(unit(basename(path), { unitKind: "file", ...residue }));
+    // Declarations show as markers in the residue's text; a blank line reads better.
+    const text = (side: ReadFile | null) => (side && !side.residue.empty ? clip(side.residue.text.replaceAll("\0", "\n\n")) : undefined);
+    units.push(unit(basename(path), { unitKind: "file", ...residue, before: text(base), after: text(head) }));
     tokens.set(`${path}#${basename(path)}`, { base: base?.residue.tokens, head: head?.residue.tokens });
   }
 
