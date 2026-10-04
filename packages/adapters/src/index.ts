@@ -11,3 +11,7 @@ export { GitHubApp, appCredentials, type GitHubAppCredentials } from "./github/g
 export { GitHubAppPullRequestSource } from "./github/pull-request-source.app.js";
 export { EnvRepoSettings } from "./settings/repo-settings.env.js";
 export { sign, verifySignature } from "./github/webhook-signature.js";
+export { FileLabelCache } from "./labels/label-cache.file.js";
+export { MockLlm } from "./llm/llm.mock.js";
+export { OpenAiLlm, type OpenAiOptions } from "./llm/llm.openai.js";
+export { AnthropicLlm, type AnthropicOptions } from "./llm/llm.real.js";
