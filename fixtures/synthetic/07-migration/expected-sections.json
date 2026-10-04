@@ -1,0 +1,18 @@
+{
+  "technical": {
+    "gate": "full",
+    "sections": [
+      "title",
+      "problem",
+      "changeMap",
+      "structureChange",
+      "dataChange",
+      "risksRollout",
+      "wrap"
+    ],
+    "draft": [
+      "reviewFocus"
+    ]
+  },
+  "business": null
+}

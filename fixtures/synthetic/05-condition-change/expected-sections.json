@@ -1,0 +1,28 @@
+{
+  "technical": {
+    "gate": "full",
+    "sections": [
+      "title",
+      "problem",
+      "changeMap",
+      "rule",
+      "risksRollout",
+      "wrap"
+    ],
+    "draft": [
+      "reviewFocus"
+    ]
+  },
+  "business": {
+    "gate": "full",
+    "sections": [
+      "headline",
+      "before",
+      "whatsNew",
+      "theRuleNow",
+      "inNumbers",
+      "whatToKnow",
+      "wrap"
+    ]
+  }
+}

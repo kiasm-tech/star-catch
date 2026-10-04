@@ -1,0 +1,22 @@
+{
+  "technical": {
+    "gate": "articleOnly",
+    "sections": [
+      "title",
+      "changeMap",
+      "risksRollout",
+      "wrap"
+    ],
+    "draft": [
+      "reviewFocus"
+    ]
+  },
+  "business": {
+    "gate": "articleOnly",
+    "sections": [
+      "headline",
+      "whatsNew",
+      "wrap"
+    ]
+  }
+}

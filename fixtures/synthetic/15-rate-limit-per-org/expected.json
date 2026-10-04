@@ -1,0 +1,107 @@
+{
+  "pr": {
+    "fullName": "acme/shop",
+    "number": 921,
+    "headSha": "4e6a8c0b2d4f6e8a0c2b4d6f8e0a2c4b6d8f0e21"
+  },
+  "truncated": false,
+  "units": [
+    {
+      "id": "app/api/orders/route.ts#POST",
+      "file": "app/api/orders/route.ts",
+      "name": "POST",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "bodyChanged",
+      "refactorings": []
+    },
+    {
+      "id": "graphql/resolvers.ts#createOrder",
+      "file": "graphql/resolvers.ts",
+      "name": "createOrder",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "conditionChanged",
+      "refactorings": []
+    },
+    {
+      "id": "jobs/ingest.ts#ingestBatch",
+      "file": "jobs/ingest.ts",
+      "name": "ingestBatch",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "conditionChanged",
+      "refactorings": []
+    },
+    {
+      "id": "limits/limiter.ts#limitFor",
+      "file": "limits/limiter.ts",
+      "name": "limitFor",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": []
+    },
+    {
+      "id": "limits/limiter.ts#allowRequest",
+      "file": "limits/limiter.ts",
+      "name": "allowRequest",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "conditionChanged",
+      "refactorings": []
+    },
+    {
+      "id": "store/usage.ts#usageOf",
+      "file": "store/usage.ts",
+      "name": "usageOf",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "bodyChanged",
+      "refactorings": []
+    },
+    {
+      "id": "limits/limiter.test.ts#limiter.test.ts",
+      "file": "limits/limiter.test.ts",
+      "name": "limiter.test.ts",
+      "unitKind": "file",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": []
+    },
+    {
+      "id": "limits/limiter.test.ts#allowRequest",
+      "file": "limits/limiter.test.ts",
+      "name": "allowRequest",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": []
+    },
+    {
+      "id": "limits/limiter.test.ts#allowRequest > counts two keys of one organisation against one limit",
+      "file": "limits/limiter.test.ts",
+      "name": "allowRequest > counts two keys of one organisation against one limit",
+      "unitKind": "declaration",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": []
+    },
+    {
+      "id": "db/migrations/20261001120000_carry_usage_to_orgs.sql#usage_counters",
+      "file": "db/migrations/20261001120000_carry_usage_to_orgs.sql",
+      "name": "usage_counters",
+      "unitKind": "schemaEntity",
+      "verdict": "behavioural",
+      "changeType": "added",
+      "refactorings": []
+    }
+  ],
+  "entryPoints": [
+    {
+      "unitId": "app/api/orders/route.ts#POST",
+      "type": "apiRoute"
+    }
+  ],
+  "excluded": []
+}

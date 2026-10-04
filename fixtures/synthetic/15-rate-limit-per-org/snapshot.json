@@ -1,0 +1,91 @@
+{
+  "fullName": "acme/shop",
+  "number": 921,
+  "url": "https://github.com/acme/shop/pull/921",
+  "title": "fix(limits): rate limits count per organisation, not per key",
+  "body": "Limits were counted per API key, which is wrong: an organisation with two keys got twice the quota. This counts usage per organisation so that every key of a team shares one limit, and REST, GraphQL and batch ingest now ask the same limiter. A migration carries existing usage over instead of resetting it. Under load, latency now goes from 4.0 to 4.2 ms.",
+  "author": "acme-dev",
+  "state": "closed",
+  "merged": true,
+  "baseRef": "main",
+  "headRef": "fix/limits-per-org",
+  "baseSha": "9a1f3c5e7b2d4f6a8c0e1b3d5f7a9c1e3b5d7f92",
+  "headSha": "4e6a8c0b2d4f6e8a0c2b4d6f8e0a2c4b6d8f0e21",
+  "createdAt": "2026-10-01T09:00:00Z",
+  "updatedAt": "2026-10-02T16:00:00Z",
+  "labels": [],
+  "installationId": null,
+  "fetchedAt": "2026-10-02T16:01:00Z",
+  "truncated": false,
+  "files": [
+    {
+      "filename": "app/api/orders/route.ts",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "patch": "@@ -1,7 +1,7 @@\n import { allowRequest } from \"../../../limits/limiter\";\n \n export async function POST(request: Request): Promise<Response> {\n-  const apiKey = request.headers.get(\"x-api-key\") ?? \"\";\n-  if (!allowRequest(apiKey)) return new Response(\"Too many requests\", { status: 429 });\n+  const orgId = request.headers.get(\"x-org-id\") ?? \"\";\n+  if (!allowRequest(orgId)) return new Response(\"Too many requests\", { status: 429 });\n   return Response.json({ ok: true });\n }",
+      "baseContent": "import { allowRequest } from \"../../../limits/limiter\";\n\nexport async function POST(request: Request): Promise<Response> {\n  const apiKey = request.headers.get(\"x-api-key\") ?? \"\";\n  if (!allowRequest(apiKey)) return new Response(\"Too many requests\", { status: 429 });\n  return Response.json({ ok: true });\n}\n",
+      "headContent": "import { allowRequest } from \"../../../limits/limiter\";\n\nexport async function POST(request: Request): Promise<Response> {\n  const orgId = request.headers.get(\"x-org-id\") ?? \"\";\n  if (!allowRequest(orgId)) return new Response(\"Too many requests\", { status: 429 });\n  return Response.json({ ok: true });\n}\n"
+    },
+    {
+      "filename": "graphql/resolvers.ts",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,6 +1,6 @@\n import { allowRequest } from \"../limits/limiter\";\n \n export function createOrder(_: unknown, args: { item: string }, ctx: { apiKey: string; orgId: string }) {\n-  if (!allowRequest(ctx.apiKey)) throw new Error(\"Too many requests\");\n+  if (!allowRequest(ctx.orgId)) throw new Error(\"Too many requests\");\n   return { item: args.item };\n }",
+      "baseContent": "import { allowRequest } from \"../limits/limiter\";\n\nexport function createOrder(_: unknown, args: { item: string }, ctx: { apiKey: string; orgId: string }) {\n  if (!allowRequest(ctx.apiKey)) throw new Error(\"Too many requests\");\n  return { item: args.item };\n}\n",
+      "headContent": "import { allowRequest } from \"../limits/limiter\";\n\nexport function createOrder(_: unknown, args: { item: string }, ctx: { apiKey: string; orgId: string }) {\n  if (!allowRequest(ctx.orgId)) throw new Error(\"Too many requests\");\n  return { item: args.item };\n}\n"
+    },
+    {
+      "filename": "jobs/ingest.ts",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,6 +1,6 @@\n import { allowRequest } from \"../limits/limiter\";\n \n export function ingestBatch(batch: { apiKey: string; orgId: string; rows: string[] }): number {\n-  if (!allowRequest(batch.apiKey)) return 0;\n+  if (!allowRequest(batch.orgId)) return 0;\n   return batch.rows.length;\n }",
+      "baseContent": "import { allowRequest } from \"../limits/limiter\";\n\nexport function ingestBatch(batch: { apiKey: string; orgId: string; rows: string[] }): number {\n  if (!allowRequest(batch.apiKey)) return 0;\n  return batch.rows.length;\n}\n",
+      "headContent": "import { allowRequest } from \"../limits/limiter\";\n\nexport function ingestBatch(batch: { apiKey: string; orgId: string; rows: string[] }): number {\n  if (!allowRequest(batch.orgId)) return 0;\n  return batch.rows.length;\n}\n"
+    },
+    {
+      "filename": "limits/limiter.ts",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 1,
+      "patch": "@@ -1,6 +1,10 @@\n import { usageOf } from \"../store/usage\";\n \n+export function limitFor(orgId: string): number {\n+  return orgId.startsWith(\"trial-\") ? 100 : 1000;\n+}\n+\n export function allowRequest(id: string): boolean {\n-  if (usageOf(id) >= 1000) return false;\n+  if (usageOf(id) >= limitFor(id)) return false;\n   return true;\n }",
+      "baseContent": "import { usageOf } from \"../store/usage\";\n\nexport function allowRequest(id: string): boolean {\n  if (usageOf(id) >= 1000) return false;\n  return true;\n}\n",
+      "headContent": "import { usageOf } from \"../store/usage\";\n\nexport function limitFor(orgId: string): number {\n  return orgId.startsWith(\"trial-\") ? 100 : 1000;\n}\n\nexport function allowRequest(id: string): boolean {\n  if (usageOf(id) >= limitFor(id)) return false;\n  return true;\n}\n"
+    },
+    {
+      "filename": "store/usage.ts",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "patch": "@@ -1,5 +1,5 @@\n const counters = new Map<string, number>();\n \n export function usageOf(id: string): number {\n-  return counters.get(`key:${id}`) ?? 0;\n+  return counters.get(`org:${id}`) ?? 0;\n }",
+      "baseContent": "const counters = new Map<string, number>();\n\nexport function usageOf(id: string): number {\n  return counters.get(`key:${id}`) ?? 0;\n}\n",
+      "headContent": "const counters = new Map<string, number>();\n\nexport function usageOf(id: string): number {\n  return counters.get(`org:${id}`) ?? 0;\n}\n"
+    },
+    {
+      "filename": "limits/limiter.test.ts",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,8 @@\n+import { describe, expect, it } from \"vitest\";\n+import { allowRequest } from \"./limiter\";\n+\n+describe(\"allowRequest\", () => {\n+  it(\"counts two keys of one organisation against one limit\", () => {\n+    expect(allowRequest(\"acme\")).toBe(true);\n+  });\n+});",
+      "headContent": "import { describe, expect, it } from \"vitest\";\nimport { allowRequest } from \"./limiter\";\n\ndescribe(\"allowRequest\", () => {\n  it(\"counts two keys of one organisation against one limit\", () => {\n    expect(allowRequest(\"acme\")).toBe(true);\n  });\n});\n"
+    },
+    {
+      "filename": "db/migrations/20261001120000_carry_usage_to_orgs.sql",
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1 @@\n+UPDATE usage_counters SET subject = 'org:' || org_id WHERE subject LIKE 'key:%';",
+      "headContent": "UPDATE usage_counters SET subject = 'org:' || org_id WHERE subject LIKE 'key:%';\n"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "4e6a8c0b2d4f6e8a0c2b4d6f8e0a2c4b6d8f0e21",
+      "message": "fix(limits): count usage per organisation"
+    }
+  ],
+  "linkedIssues": [],
+  "ciConclusion": "success"
+}
