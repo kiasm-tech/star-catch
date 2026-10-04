@@ -33,5 +33,7 @@ export { receiveWebhook, type IncomingWebhook, type WebhookOutcome } from "./web
 export { ingestPullRequest, type IngestDeps, type IngestOutcome } from "./usecases/ingest-pull-request.js";
 export { analyzeChanges } from "./usecases/analyze-changes.js";
 export { numbersIn, sentencesOf, splitSentences } from "./text.js";
+export { concernsOf } from "./group.js";
+export { factsOf, type FactInput } from "./facts.js";
 export { buildContext, type ContextPorts } from "./usecases/build-context.js";
 export type { Llm, LlmRequest } from "./ports/llm.js";

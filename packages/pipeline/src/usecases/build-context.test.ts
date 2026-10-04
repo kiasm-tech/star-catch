@@ -28,11 +28,15 @@ describe("buildContext", () => {
   });
 
   it.each(loadRecordedSnapshots().map((s) => [`${s.fullName}#${s.number}`, s] as const))(
-    "%s gives a valid context, the same both times",
+    "%s gives a valid context, the same both times, each changed unit in one concern",
     async (_name, snapshot) => {
       const once = await buildContext(snapshot, ports);
       expect(await buildContext(snapshot, ports)).toEqual(once);
       expect(once.units.every((u) => u.verdict === "notAChange" || u.labels !== undefined)).toBe(true);
+      const changed = once.units.filter((u) => u.verdict !== "notAChange").map((u) => u.id);
+      expect(once.concerns.flatMap((c) => c.unitIds).sort()).toEqual(changed.sort());
+      const known = new Set([...once.units.map((u) => u.id), ...once.sentences.map((s) => s.id)]);
+      expect(once.facts.flatMap((f) => f.sources).filter((id) => !known.has(id))).toEqual([]);
     },
   );
 });
