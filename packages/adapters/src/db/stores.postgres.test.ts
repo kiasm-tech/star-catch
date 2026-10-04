@@ -28,10 +28,12 @@ describe("PostgresDeliveryStore", () => {
     payload: { action: "opened", note: "nul\u0000here" },
   };
 
-  it("stores a delivery once and reports a redelivery", async () => {
+  it("stores a delivery once and says whether a redelivery was handled", async () => {
     const store = new PostgresDeliveryStore(db);
-    expect(await store.add(delivery)).toBe(true);
-    expect(await store.add({ ...delivery, payload: { changed: true } })).toBe(false);
+    expect(await store.add(delivery)).toBe("new");
+    expect(await store.add({ ...delivery, payload: { changed: true } })).toBe("pending");
+    await store.markHandled(delivery.id);
+    expect(await store.add(delivery)).toBe("handled");
 
     const rows = await db.selectFrom("star_catch.webhook_deliveries").selectAll().execute();
     expect(rows).toHaveLength(1);

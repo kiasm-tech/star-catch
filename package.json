@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "cli": "tsx apps/cli/src/main.ts"
+    "cli": "tsx apps/cli/src/main.ts",
+    "intake": "tsx apps/intake/src/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

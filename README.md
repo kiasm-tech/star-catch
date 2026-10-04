@@ -15,6 +15,7 @@ pnpm cli fixtures                                         # check every fixture
 GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
 docker compose up -d --wait                               # local Postgres
 DATABASE_URL=postgres://star_catch:star_catch@localhost:5432/star_catch pnpm cli migrate
+DATABASE_URL=… GITHUB_WEBHOOK_SECRET=dev pnpm intake           # webhook receiver on :8080
 ```
 
 Node 22.12 or later. Tests need Docker running: they start their own Postgres

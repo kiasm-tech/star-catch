@@ -11,6 +11,7 @@ export interface WebhookDeliveriesTable {
   installation_id: ColumnType<string | null, number | null, number | null>;
   received_at: Generated<Date>;
   payload: Json;
+  handled_at: ColumnType<Date | null, never, Date>;
 }
 
 export interface PrSnapshotsTable {

@@ -1,5 +1,5 @@
 export type { PullRequestRef, PullRequestSource } from "./ports/pull-request-source.js";
-export type { DeliveryStore, WebhookDelivery } from "./ports/delivery-store.js";
+export type { DeliveryStatus, DeliveryStore, WebhookDelivery } from "./ports/delivery-store.js";
 export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
 export {
@@ -27,3 +27,5 @@ export {
 export { applyPatch, countPatchLines } from "./fixtures/patch.js";
 export { recordPullRequests, type RecordedPullRequest } from "./usecases/record-pull-requests.js";
 export { checkFixtures, type FixtureCheck } from "./usecases/check-fixtures.js";
+export { routeDelivery, type Route } from "./webhooks/route.js";
+export { receiveWebhook, type IncomingWebhook, type WebhookOutcome } from "./webhooks/receive-webhook.js";

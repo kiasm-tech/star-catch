@@ -1,0 +1,16 @@
+{
+  "name": "@star-catch/intake",
+  "private": true,
+  "description": "GitHub webhook receiver: verify, store, route, answer 202.",
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "@star-catch/adapters": "workspace:*",
+    "@star-catch/pipeline": "workspace:*",
+    "hono": "^4.13.12"
+  },
+  "devDependencies": {
+    "@star-catch/testkit": "workspace:*"
+  }
+}
