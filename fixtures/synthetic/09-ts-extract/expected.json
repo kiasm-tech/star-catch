@@ -36,5 +36,74 @@
       "type": "calls"
     }
   ],
-  "excluded": []
+  "excluded": [],
+  "sentences": [
+    {
+      "id": "description:0",
+      "origin": "description",
+      "text": "The invoice email needs the same total the receipt prints.",
+      "class": "problem"
+    },
+    {
+      "id": "description:1",
+      "origin": "description",
+      "text": "This moves the subtotal and tax calculation out of receiptLines into an exported orderTotal so both can share it.",
+      "class": "rationale"
+    },
+    {
+      "id": "commit:50e2617f2dc60b96667e3f44a8a9c48d1bd70e1a:0",
+      "origin": "commit:50e2617f2dc60b96667e3f44a8a9c48d1bd70e1a",
+      "text": "refactor(orders): extract orderTotal from receiptLines",
+      "class": "behaviour"
+    }
+  ],
+  "concerns": [
+    {
+      "id": "concern-1",
+      "unitIds": [
+        "src/orders/receipt.ts#orderTotal",
+        "src/orders/receipt.ts#receiptLines"
+      ],
+      "rank": 1
+    }
+  ],
+  "facts": [
+    {
+      "group": "intent",
+      "key": "problem",
+      "value": "The invoice email needs the same total the receipt prints.",
+      "sources": [
+        "description:0"
+      ]
+    },
+    {
+      "group": "intent",
+      "key": "rationale",
+      "value": "This moves the subtotal and tax calculation out of receiptLines into an exported orderTotal so both can share it.",
+      "sources": [
+        "description:1"
+      ]
+    },
+    {
+      "group": "shape",
+      "key": "components",
+      "value": [
+        "src"
+      ],
+      "sources": [
+        "src/orders/receipt.ts#orderTotal",
+        "src/orders/receipt.ts#receiptLines"
+      ]
+    },
+    {
+      "group": "shape",
+      "key": "added",
+      "value": [
+        "orderTotal"
+      ],
+      "sources": [
+        "src/orders/receipt.ts#orderTotal"
+      ]
+    }
+  ]
 }
