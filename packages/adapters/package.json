@@ -7,11 +7,14 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@kiasm-tech/star-catch-contracts": "workspace:*",
     "@octokit/auth-app": "^8",
     "@octokit/rest": "^22.0.1",
+    "@star-catch/changes": "workspace:*",
     "@star-catch/pipeline": "workspace:*",
     "kysely": "^0.29.6",
+    "openai": "^7.27.0",
     "pg": "^8.23.1",
     "pg-boss": "^12.36.0"
   },

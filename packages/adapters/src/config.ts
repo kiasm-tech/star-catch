@@ -1,5 +1,5 @@
 /** Services that have a mock twin. */
-export type MockableService = "github";
+export type MockableService = "github" | "llm";
 
 /** `STAR_CATCH_MOCK_<SERVICE>` wins over the `STAR_CATCH_MOCK` master switch; both default to off. */
 export function isMock(service: MockableService, env: Record<string, string | undefined>): boolean {

@@ -17,7 +17,7 @@ const ALLOWED: Record<string, string[]> = {
   [TESTKIT]: [CONTRACTS],
   [CHANGES]: [CONTRACTS],
   [PIPELINE]: [CONTRACTS, CHANGES],
-  [ADAPTERS]: [CONTRACTS, PIPELINE],
+  [ADAPTERS]: [CONTRACTS, PIPELINE, CHANGES],
   "@star-catch/cli": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/intake": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/worker": [CONTRACTS, PIPELINE, ADAPTERS],
