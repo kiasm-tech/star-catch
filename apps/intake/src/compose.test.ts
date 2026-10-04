@@ -1,11 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { PgBossJobQueue, connect, migrate, type StarCatchDb } from "@star-catch/adapters";
+import { connect, migrate, PgBossJobQueue, sign, type StarCatchDb } from "@star-catch/adapters";
 import { CRUX_GITHUB_EVENT_QUEUE, INGEST_QUEUE, QUEUES } from "@star-catch/pipeline";
 import { FIXTURES_DIR, freshDatabase, type TestDatabase } from "@star-catch/testkit";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compose, type Intake } from "./compose.js";
-import { sign } from "./signature.js";
 
 const SECRET = "s3cret";
 let database: TestDatabase;

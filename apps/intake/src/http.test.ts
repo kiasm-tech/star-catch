@@ -1,7 +1,7 @@
 import type { IncomingWebhook, WebhookOutcome } from "@star-catch/pipeline";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "./http.js";
-import { sign } from "./signature.js";
+import { sign } from "@star-catch/adapters";
 
 const SECRET = "s3cret";
 

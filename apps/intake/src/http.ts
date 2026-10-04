@@ -1,6 +1,6 @@
 import type { IncomingWebhook, WebhookOutcome } from "@star-catch/pipeline";
 import { Hono } from "hono";
-import { verifySignature } from "./signature.js";
+import { verifySignature } from "@star-catch/adapters";
 
 export interface IntakeDeps {
   /** The GitHub App's webhook secret. */
