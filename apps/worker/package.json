@@ -1,0 +1,14 @@
+{
+  "name": "@star-catch/worker",
+  "private": true,
+  "description": "pg-boss consumers: one run drains the star-catch queues, --watch keeps polling.",
+  "type": "module",
+  "dependencies": {
+    "@kiasm-tech/star-catch-contracts": "workspace:*",
+    "@star-catch/adapters": "workspace:*",
+    "@star-catch/pipeline": "workspace:*"
+  },
+  "devDependencies": {
+    "@star-catch/testkit": "workspace:*"
+  }
+}

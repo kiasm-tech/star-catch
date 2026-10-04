@@ -11,10 +11,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "cli": "tsx apps/cli/src/main.ts",
-    "intake": "tsx apps/intake/src/main.ts"
+    "intake": "tsx apps/intake/src/main.ts",
+    "worker": "tsx apps/worker/src/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@star-catch/adapters": "workspace:*",
+    "@star-catch/testkit": "workspace:*",
     "@types/node": "^26.0.1",
     "eslint": "^9.39.4",
     "globals": "^16.4.0",

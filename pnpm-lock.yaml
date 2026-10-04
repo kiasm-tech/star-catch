@@ -11,6 +11,12 @@ importers:
       '@eslint/js':
         specifier: ^9.39.0
         version: 9.39.5
+      '@star-catch/adapters':
+        specifier: workspace:*
+        version: link:packages/adapters
+      '@star-catch/testkit':
+        specifier: workspace:*
+        version: link:packages/testkit
       '@types/node':
         specifier: ^26.0.1
         version: 26.6.3
@@ -66,6 +72,22 @@ importers:
       hono:
         specifier: ^4.13.12
         version: 4.13.12
+    devDependencies:
+      '@star-catch/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
+
+  apps/worker:
+    dependencies:
+      '@kiasm-tech/star-catch-contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@star-catch/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@star-catch/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
     devDependencies:
       '@star-catch/testkit':
         specifier: workspace:*
