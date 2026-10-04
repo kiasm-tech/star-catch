@@ -52,13 +52,20 @@ describe("mockClassifier", () => {
 
   it.each([
     ["Customers never got the discount.", "problem"],
+    ["The invoice email needs the same total.", "problem"],
     ["This lowers the threshold so the discount applies.", "rationale"],
+    ["This moves the sum out so both can share it.", "rationale"],
     ["Run the migration before deploying.", "instruction"],
     ["The cart now rounds up.", "behaviour"],
     ["Thanks!", "noise"],
   ])("classes %j as %s", async (text, sentenceClass) => {
     const [result] = await mockClassifier.classify([{ type: "sentence", id: "description:0", origin: "description", text, title: "" }]);
     expect(result).toMatchObject({ class: sentenceClass });
+  });
+
+  it("classes a commit subject as behaviour", async () => {
+    const [result] = await mockClassifier.classify([{ type: "sentence", id: "commit:abc1234:0", origin: "commit:abc1234", text: "fix: the crash", title: "" }]);
+    expect(result).toMatchObject({ class: "behaviour" });
   });
 });
 

@@ -20,8 +20,8 @@ const INTENT_BY_TYPE: Record<string, Intent> = {
 };
 
 const SENTENCE_RULES: [RegExp, SentenceClass][] = [
-  [/\b(never|bug|broken|breaks?|fails?|failing|errors?|crash(es)?|wrong|can'?t|cannot|doesn'?t|didn'?t|tickets?|races?|stale|regression)\b/i, "problem"],
-  [/\b(so that|so the|because|in order to|otherwise|which means)\b/i, "rationale"],
+  [/\b(never|bug|broken|breaks?|fails?|failing|errors?|crash(es)?|wrong|can'?t|cannot|doesn'?t|didn'?t|tickets?|races?|stale|regression|asked|needs?|guessing|confus\w*|unclear)\b/i, "problem"],
+  [/\b(so (that|the|both|it|we|they)|because|in order to|otherwise|which means)\b/i, "rationale"],
   [/^(run|set|make sure|migrate|deploy|update|please|remember)\b/i, "instruction"],
   [/\b(now|will|adds?|removes?|lowers?|raises?|returns?|changes?|supports?|uses?)\b/i, "behaviour"],
 ];
@@ -56,6 +56,7 @@ function unitResult(item: UnitItem): ClassifyResult {
 }
 
 function sentenceResult(item: SentenceItem): ClassifyResult {
+  if (item.origin.startsWith("commit:")) return { type: "sentence", id: item.id, class: "behaviour", confidence: 1 };
   const rule = SENTENCE_RULES.find(([pattern]) => pattern.test(item.text));
   return { type: "sentence", id: item.id, class: rule?.[1] ?? "noise", confidence: 1 };
 }
