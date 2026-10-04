@@ -1,11 +1,13 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ContextExpectationSchema,
   PullRequestSnapshotSchema,
+  SectionsExpectationSchema,
   type ContextExpectation,
   type PullRequestSnapshot,
+  type SectionsExpectation,
 } from "@kiasm-tech/star-catch-contracts";
 
 /** The repository's fixtures/ folder. */
@@ -15,6 +17,8 @@ export interface SyntheticFixture {
   name: string;
   snapshot: PullRequestSnapshot;
   expected: ContextExpectation;
+  /** Absent only while a fixture is being written; `pnpm cli fixtures` requires it. */
+  sections?: SectionsExpectation;
 }
 
 const readJson = (file: string): unknown => JSON.parse(readFileSync(file, "utf8"));
@@ -30,6 +34,9 @@ export function loadSyntheticFixtures(dir = FIXTURES_DIR): SyntheticFixture[] {
       name,
       snapshot: PullRequestSnapshotSchema.parse(readJson(path.join(root, name, "snapshot.json"))),
       expected: ContextExpectationSchema.parse(readJson(path.join(root, name, "expected.json"))),
+      ...(existsSync(path.join(root, name, "expected-sections.json")) && {
+        sections: SectionsExpectationSchema.parse(readJson(path.join(root, name, "expected-sections.json"))),
+      }),
     }));
 }
 

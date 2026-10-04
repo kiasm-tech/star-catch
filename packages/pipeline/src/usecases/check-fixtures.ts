@@ -1,6 +1,7 @@
 import {
   ContextExpectationSchema,
   PullRequestSnapshotSchema,
+  SectionsExpectationSchema,
   type PullRequestSnapshot,
 } from "@kiasm-tech/star-catch-contracts";
 import type { FixtureReader } from "../ports/fixtures.js";
@@ -41,12 +42,17 @@ export async function checkFixtures(reader: FixtureReader): Promise<FixtureCheck
   }
 
   const numbers = new Map<number, string>();
-  for (const { name, snapshot, expected } of await reader.syntheticFixtures()) {
+  for (const { name, snapshot, expected, sections } of await reader.syntheticFixtures()) {
     const problems: string[] = [];
     const snap = PullRequestSnapshotSchema.safeParse(snapshot);
     const exp = ContextExpectationSchema.safeParse(expected);
     if (!snap.success) problems.push(`snapshot: ${issues(snap.error)}`);
     if (!exp.success) problems.push(`expected: ${issues(exp.error)}`);
+    if (sections === undefined) problems.push("no expected-sections.json");
+    else {
+      const sec = SectionsExpectationSchema.safeParse(sections);
+      if (!sec.success) problems.push(`expected-sections: ${issues(sec.error)}`);
+    }
     if (snap.success) {
       problems.push(...syntheticProblems(snap.data));
       const other = numbers.get(snap.data.number);

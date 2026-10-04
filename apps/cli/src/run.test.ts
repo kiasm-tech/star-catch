@@ -29,7 +29,7 @@ describe("cli fixtures", () => {
   it("passes on the repository's fixtures", async () => {
     expect(await run(["fixtures"], mockEnv(), io)).toBe(0);
     expect(out.at(-1)).toMatch(/^(\d+)\/\1 fixtures ok$/);
-    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(14);
+    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(15);
   });
 
   it("fails and names the fixture when a patch is wrong", async () => {
@@ -167,7 +167,7 @@ describe("cli context", () => {
 describe("cli eval-classify", () => {
   it("compares the offline classifier with every pinned label", async () => {
     expect(await run(["eval-classify"], mockEnv(), io)).toBe(0);
-    expect(err[0]).toMatch(/^\d+ items to label in 14 fixtures \(\d+ characters\) by mock@1$/);
+    expect(err[0]).toMatch(/^\d+ items to label in 15 fixtures \(\d+ characters\) by mock@1$/);
     expect(out.at(-1)).toMatch(/^(\d+)\/\1 agree$/);
   });
 
