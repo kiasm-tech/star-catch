@@ -22,5 +22,82 @@
       }
     }
   ],
-  "excluded": []
+  "excluded": [],
+  "sentences": [
+    {
+      "id": "description:0",
+      "origin": "description",
+      "text": "Customers asked to add a short message when an order is a gift.",
+      "class": "problem"
+    },
+    {
+      "id": "description:1",
+      "origin": "description",
+      "text": "This migration adds a nullable gift_note column to orders; the checkout form will use it in a follow-up.",
+      "class": "behaviour"
+    },
+    {
+      "id": "commit:59a88a597936cbb4f75c1a5c8bade8d3119ba55c:0",
+      "origin": "commit:59a88a597936cbb4f75c1a5c8bade8d3119ba55c",
+      "text": "feat(orders): add the gift_note column",
+      "class": "behaviour"
+    }
+  ],
+  "concerns": [
+    {
+      "id": "concern-1",
+      "unitIds": [
+        "db/migrations/20260930120000_add_gift_note_to_orders.sql#orders.gift_note"
+      ],
+      "rank": 1
+    }
+  ],
+  "facts": [
+    {
+      "group": "intent",
+      "key": "problem",
+      "value": "Customers asked to add a short message when an order is a gift.",
+      "sources": [
+        "description:0"
+      ]
+    },
+    {
+      "group": "shape",
+      "key": "components",
+      "value": [
+        "db"
+      ],
+      "sources": [
+        "db/migrations/20260930120000_add_gift_note_to_orders.sql#orders.gift_note"
+      ]
+    },
+    {
+      "group": "shape",
+      "key": "added",
+      "value": [
+        "orders.gift_note"
+      ],
+      "sources": [
+        "db/migrations/20260930120000_add_gift_note_to_orders.sql#orders.gift_note"
+      ]
+    },
+    {
+      "group": "data",
+      "key": "added",
+      "value": [
+        "orders.gift_note"
+      ],
+      "sources": [
+        "db/migrations/20260930120000_add_gift_note_to_orders.sql#orders.gift_note"
+      ]
+    },
+    {
+      "group": "rollout",
+      "key": "migration",
+      "value": true,
+      "sources": [
+        "db/migrations/20260930120000_add_gift_note_to_orders.sql#orders.gift_note"
+      ]
+    }
+  ]
 }

@@ -42,11 +42,11 @@ the contracts, the patch counts, and that each patch turns the base content into
 | 02-comment-only | Comments inside a TS function edited → notAChange |
 | 03-rename-only | TS function renamed, two callers updated → all structural, rename |
 | 04-lockfile-only | `pnpm-lock.yaml` changed → excluded as lockfile, no units |
-| 05-condition-change | Discount threshold changed → behavioural, conditionChanged; a problem sentence |
+| 05-condition-change | Discount threshold changed → behavioural, conditionChanged; sentence classes, one concern, intent/rules/untested/evidence facts |
 | 06-config-key | New key in `config/flags.json` → configKey added, kind configuration |
-| 07-migration | SQL migration adds a column → schemaEntity added, risk dataMigration |
-| 08-ui-with-test | Page text and its test changed → ui unit, a test-case unit, covers link, page entry point |
-| 09-ts-extract | TS block extracted into a helper → both structural, extract |
+| 07-migration | SQL migration adds a column → schemaEntity added, risk dataMigration; data and rollout facts |
+| 08-ui-with-test | Page text and its test changed → ui unit, a test-case unit, covers link, page entry point; the test joins the page's concern; users and quality facts |
+| 09-ts-extract | TS block extracted into a helper → both structural, extract; one concern through the calls link |
 | 10-python-rename | Python function renamed, callers updated → structural, rename |
 | 11-python-condition | Python threshold changed → behavioural, conditionChanged |
 | 12-python-extract | Python method extracted → structural, extract |

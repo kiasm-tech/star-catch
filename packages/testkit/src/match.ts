@@ -76,16 +76,18 @@ export function expectContextMatches(actual: Context, expected: ContextExpectati
 /** The parts of a change set the analysis decides; structural, so testkit needn't import changes. */
 export interface ChangesLike {
   units: unknown[];
+  links: unknown[];
+  entryPoints: unknown[];
   excluded: unknown[];
   truncated: boolean;
 }
 
 /**
- * Like expectContextMatches, restricted to `units`, `excluded` and `truncated`. Unit labels, links
- * and entry points in the expectation come from a later stage and are not compared.
+ * Like expectContextMatches, restricted to what a change set holds: `units`, `links`,
+ * `entryPoints`, `excluded` and `truncated`. Unit labels come from classification and are not compared.
  */
 export function expectChangesMatch(actual: ChangesLike, expected: ContextExpectation): void {
-  const { excluded, truncated } = expected;
+  const { links, entryPoints, excluded, truncated } = expected;
   const units = expected.units?.map(({ labels: _labels, ...unit }) => unit);
-  matchValue(actual, { units, excluded, truncated }, "");
+  matchValue(actual, { units, links, entryPoints, excluded, truncated }, "");
 }

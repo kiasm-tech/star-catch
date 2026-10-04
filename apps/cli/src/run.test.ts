@@ -144,3 +144,57 @@ describe("cli analyze", () => {
     expect(await run(["analyze"], mockEnv(), io)).toBe(2);
   });
 });
+
+describe("cli context", () => {
+  it("prints a fixture's context with the offline classifier", async () => {
+    expect(await run(["context", path.join(dir, "synthetic", "08-ui-with-test")], mockEnv(), io)).toBe(0);
+    const context = JSON.parse(out.join("\n"));
+    expect(context.concerns).toHaveLength(1);
+    expect(context.facts.map((f: { group: string; key: string }) => `${f.group}.${f.key}`)).toContain("users.screens");
+    expect(err[0]).toMatch(/^concern-1 \(importance 8\): /);
+    expect(err.at(-1)).toMatch(/^2 units, 4 sentences, 1 concerns, 6 facts in \d+ ms by mock@1$/);
+  });
+
+  it("asks for a model, then for a key, before classifying for real", async () => {
+    const target = path.join(dir, "synthetic", "08-ui-with-test");
+    expect(await run(["context", target], { STAR_CATCH_MOCK: "false", STAR_CATCH_FIXTURES_DIR: dir }, io)).toBe(2);
+    expect(err.at(-1)).toMatch(/^Set STAR_CATCH_CLASSIFIER_MODEL/);
+    expect(await run(["context", target], { STAR_CATCH_CLASSIFIER_MODEL: "claude-haiku-4-5", STAR_CATCH_FIXTURES_DIR: dir }, io)).toBe(2);
+    expect(err.at(-1)).toMatch(/^Set ANTHROPIC_API_KEY, or OPENAI_API_KEY/);
+  });
+});
+
+describe("cli eval-classify", () => {
+  it("compares the offline classifier with every pinned label", async () => {
+    expect(await run(["eval-classify"], mockEnv(), io)).toBe(0);
+    expect(err[0]).toMatch(/^\d+ items to label in 14 fixtures \(\d+ characters\) by mock@1$/);
+    expect(out.at(-1)).toMatch(/^(\d+)\/\1 agree$/);
+  });
+
+  it("names a label that disagrees", async () => {
+    const file = path.join(dir, "synthetic", "08-ui-with-test", "expected.json");
+    const expected = JSON.parse(await readFile(file, "utf8"));
+    expected.sentences[0].class = "noise";
+    await writeFile(file, JSON.stringify(expected));
+
+    expect(await run(["eval-classify", "08-ui-with-test"], mockEnv(), io)).toBe(0);
+    expect(out).toContainEqual(expect.stringContaining("✗ description:0 class: expected noise, got problem"));
+    expect(out.at(-1)).toMatch(/^(\d+)\/(?!\1$)\d+ agree$/);
+  });
+
+  it("sends nothing to a paid model without --yes", async () => {
+    const cache = path.join(dir, "labels.json");
+    const env = { STAR_CATCH_MOCK: "false", STAR_CATCH_CLASSIFIER_MODEL: "claude-haiku-4-5", ANTHROPIC_API_KEY: "test", STAR_CATCH_LABEL_CACHE: cache, STAR_CATCH_FIXTURES_DIR: dir };
+    expect(await run(["eval-classify", "05-condition-change"], env, io)).toBe(0);
+    expect(err).toEqual([
+      expect.stringMatching(/^4 items to label in 1 fixtures \(\d+ characters\) by model:claude-haiku-4-5@prompt-[0-9a-f]{12}$/),
+      "Nothing was sent. Rerun with --yes to call the model.",
+    ]);
+    expect(out).toEqual([]);
+    await expect(readFile(cache)).rejects.toThrow(/ENOENT/);
+  });
+
+  it("refuses a fixture that doesn't exist", async () => {
+    expect(await run(["eval-classify", "99-nope"], mockEnv(), io)).toBe(2);
+  });
+});

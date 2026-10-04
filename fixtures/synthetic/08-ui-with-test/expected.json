@@ -44,5 +44,102 @@
       "type": "page"
     }
   ],
-  "excluded": []
+  "excluded": [],
+  "sentences": [
+    {
+      "id": "description:0",
+      "origin": "description",
+      "text": "The billing page said the plan renews automatically each month, which left people guessing about the date.",
+      "class": "problem"
+    },
+    {
+      "id": "description:1",
+      "origin": "description",
+      "text": "It now says the plan renews on the first day of each month, and the page test checks the new text.",
+      "class": "behaviour"
+    },
+    {
+      "id": "commit:8592719d6c06dffee6d88c812d4861f6307bdca6:0",
+      "origin": "commit:8592719d6c06dffee6d88c812d4861f6307bdca6",
+      "text": "fix(billing): say when the plan renews",
+      "class": "behaviour"
+    },
+    {
+      "id": "commit:5c2b72f908a8825826ad2aa6aca2ccf592a4a836:0",
+      "origin": "commit:5c2b72f908a8825826ad2aa6aca2ccf592a4a836",
+      "text": "test(billing): update the renewal text",
+      "class": "behaviour"
+    }
+  ],
+  "concerns": [
+    {
+      "id": "concern-1",
+      "unitIds": [
+        "app/billing/page.tsx#BillingPage",
+        "app/billing/page.test.tsx#BillingPage > explains when the plan renews"
+      ],
+      "rank": 1
+    }
+  ],
+  "facts": [
+    {
+      "group": "intent",
+      "key": "problem",
+      "value": "The billing page said the plan renews automatically each month, which left people guessing about the date.",
+      "sources": [
+        "description:0"
+      ]
+    },
+    {
+      "group": "shape",
+      "key": "components",
+      "value": [
+        "app"
+      ],
+      "sources": [
+        "app/billing/page.tsx#BillingPage",
+        "app/billing/page.test.tsx#BillingPage > explains when the plan renews"
+      ]
+    },
+    {
+      "group": "interactions",
+      "key": "entryPoints",
+      "value": [
+        "BillingPage (page)"
+      ],
+      "sources": [
+        "app/billing/page.tsx#BillingPage"
+      ]
+    },
+    {
+      "group": "users",
+      "key": "screens",
+      "value": [
+        "BillingPage"
+      ],
+      "sources": [
+        "app/billing/page.tsx#BillingPage"
+      ]
+    },
+    {
+      "group": "quality",
+      "key": "tests",
+      "value": [
+        "BillingPage > explains when the plan renews"
+      ],
+      "sources": [
+        "app/billing/page.test.tsx#BillingPage > explains when the plan renews"
+      ]
+    },
+    {
+      "group": "quality",
+      "key": "covered",
+      "value": [
+        "BillingPage"
+      ],
+      "sources": [
+        "app/billing/page.test.tsx#BillingPage > explains when the plan renews"
+      ]
+    }
+  ]
 }

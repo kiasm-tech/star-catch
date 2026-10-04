@@ -14,6 +14,8 @@ pnpm test && pnpm typecheck && pnpm lint
 pnpm cli fixtures                                         # check every fixture
 pnpm cli analyze fixtures/synthetic/09-ts-extract          # a fixture's change units
 pnpm bench                                                # analysis timings on the recorded PRs
+STAR_CATCH_MOCK_LLM=true pnpm cli context fixtures/synthetic/08-ui-with-test   # a fixture's context, offline
+STAR_CATCH_CLASSIFIER_MODEL=… ANTHROPIC_API_KEY=… pnpm eval:classify         # what it would send; --yes sends it
 GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
 docker compose up -d --wait                               # local Postgres
 DATABASE_URL=postgres://star_catch:star_catch@localhost:5432/star_catch pnpm cli migrate
@@ -24,6 +26,9 @@ GITHUB_WEBHOOK_SECRET=dev pnpm replay fixtures/webhooks/pmndrs__zustand__3469.op
 
 Node 22.12 or later. Tests need Docker running: they start their own Postgres
 (`STAR_CATCH_TEST_DATABASE_URL` points them at an existing server instead).
+
+The real classifier needs `STAR_CATCH_CLASSIFIER_MODEL` and `ANTHROPIC_API_KEY`, or `OPENAI_API_KEY`
+(with `OPENAI_BASE_URL` for Azure AI Foundry); its labels are cached in `.cache/labels.json`.
 
 Dependency rules: [test/architecture.test.ts](test/architecture.test.ts), mirrored in ESLint.
 

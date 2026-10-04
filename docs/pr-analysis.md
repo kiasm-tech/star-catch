@@ -41,7 +41,7 @@ A **change unit** is the smallest named thing that changed.
 
 | Verdict | When | Where it goes |
 |---|---|---|
-| **Not a change** | Only whitespace, formatting or comments differ; or the file is a lockfile, generated, vendored or binary | Recorded, left out of the context |
+| **Not a change** | Only whitespace, formatting or comments differ; or the file is a lockfile, generated, vendored or binary | Recorded in the context (excluded files in `excluded`), unclassified: no labels, in no concern or fact |
 | **Structural** | The unit differs only by a detected refactoring — rename, move, extract, inline — so behaviour is preserved | Into the context, tagged structural. Feeds the technical cut's *Structure change*; never the business cut |
 | **Behavioural** | Anything else | Into the context |
 
@@ -146,18 +146,22 @@ and the article, from the script. That is what "context through classification o
 
 | Fact group (update spec §4) | Derived from |
 |---|---|
-| Identity | PR metadata (step 1) |
+| Identity | PR metadata (step 1), read from the snapshot |
 | Intent | Sentences classed *problem* or *rationale*, quoted |
-| Shape | Components of structural and behavioural units; units added and removed |
-| Interactions | Link paths that start at an entry point and cross at least two components |
+| Shape | Components of structural and behavioural units; units added and removed, tests aside |
+| Interactions | Entry points among the changed units; *calls* paths that start at one and cross at least two components |
 | Data | Units of kind *data*, with their change type |
-| Contracts | Units of kind *interface* visible to API consumers or users; the *breaking* flag |
+| Contracts | Behavioural units of kind *interface*, API routes and exported API, and signature changes visible to API consumers; the *breaking* flag |
 | Rules | *Logic* units whose change type is *condition changed*, visible to users or API consumers |
-| Users | *UI* units; screenshots or preview links from the PR |
+| Users | *UI* units that are pages; screenshots or preview links from the PR |
 | Rollout | *Configuration* units; the *gated* and *data migration* flags; sentences classed *instruction* |
-| Quality | *Test* units and their *covers* links; CI status; the *untested* flag |
-| Reach | Dependents of changed units (step 8), ordered by rank (step 10) |
-| Evidence | Numbers that appear verbatim in the PR text or CI output — copied, never computed |
+| Quality | *Test* units and their *covers* links; CI status, read from the snapshot; the *untested* flag |
+| Reach | Units that call a behavioural unit (step 8), ordered by the rank of its concern (step 10) |
+| Evidence | Numbers as written in each sentence not classed *noise* — copied, never computed |
+
+A fact is a group, a key and a value, and cites the units or sentences it comes from. Facts follow
+the table's order. Identity and CI status cite neither, so they stay out of the facts and the update
+spec reads them from the snapshot.
 
 ---
 

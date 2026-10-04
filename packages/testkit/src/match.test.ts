@@ -88,6 +88,8 @@ describe("expectContextMatches", () => {
 describe("expectChangesMatch", () => {
   const changes: ChangesLike = {
     truncated: false,
+    links: [{ from: "a.ts#run", to: "a.ts#run", type: "calls" }],
+    entryPoints: [{ unitId: "a.ts#run", type: "page" }],
     units: [
       { id: "a.ts#run", verdict: "behavioural", fileClass: "source", span: { head: [1, 3] }, references: [] },
     ],
@@ -116,9 +118,14 @@ describe("expectChangesMatch", () => {
     );
   });
 
+  it("checks links and entry points", () => {
+    expect(differs({ links: [{ from: "a.ts#run", type: "calls" }] })).toBeNull();
+    expect(differs({ links: [] })).toBe("links: expected 0 items, got 1");
+    expect(differs({ entryPoints: [{ unitId: "a.ts#run", type: "apiRoute" }] })).toBe("entryPoints[0].type: expected apiRoute, got page");
+  });
+
   it("leaves what a later stage decides to the later stage", () => {
-    const later = { pr: { number: 9 }, links: [{ from: "x", to: "y", type: "calls" }], entryPoints: [{ unitId: "x" }] };
-    expect(differs(later)).toBeNull();
+    expect(differs({ pr: { number: 9 } })).toBeNull();
     expect(differs({ units: [{ id: "a.ts#run", labels: { kind: "logic" } }] })).toBeNull();
   });
 });

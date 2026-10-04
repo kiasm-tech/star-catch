@@ -30,13 +30,104 @@
     {
       "id": "description:1",
       "origin": "description",
-      "text": "This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders."
+      "text": "This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
+      "class": "rationale"
     },
     {
       "id": "commit:5a922e4f05b9624b1f9941a7764446cda0396e0c:0",
       "origin": "commit:5a922e4f05b9624b1f9941a7764446cda0396e0c",
-      "text": "fix(pricing): apply the bulk discount from 5 units"
+      "text": "fix(pricing): apply the bulk discount from 5 units",
+      "class": "behaviour"
     }
   ],
-  "excluded": []
+  "excluded": [],
+  "concerns": [
+    {
+      "id": "concern-1",
+      "unitIds": [
+        "src/pricing/discount.ts#bulkDiscount"
+      ],
+      "rank": 1
+    }
+  ],
+  "facts": [
+    {
+      "group": "intent",
+      "key": "problem",
+      "value": "Customers ordering 5 to 9 units never got the bulk discount, and support keeps getting tickets about it.",
+      "sources": [
+        "description:0"
+      ]
+    },
+    {
+      "group": "intent",
+      "key": "rationale",
+      "value": "This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
+      "sources": [
+        "description:1"
+      ]
+    },
+    {
+      "group": "shape",
+      "key": "components",
+      "value": [
+        "src"
+      ],
+      "sources": [
+        "src/pricing/discount.ts#bulkDiscount"
+      ]
+    },
+    {
+      "group": "rules",
+      "key": "conditionChanged",
+      "value": [
+        "bulkDiscount"
+      ],
+      "sources": [
+        "src/pricing/discount.ts#bulkDiscount"
+      ]
+    },
+    {
+      "group": "quality",
+      "key": "untested",
+      "value": [
+        "bulkDiscount"
+      ],
+      "sources": [
+        "src/pricing/discount.ts#bulkDiscount"
+      ]
+    },
+    {
+      "group": "evidence",
+      "key": "numbers",
+      "value": [
+        "5",
+        "9"
+      ],
+      "sources": [
+        "description:0"
+      ]
+    },
+    {
+      "group": "evidence",
+      "key": "numbers",
+      "value": [
+        "10",
+        "5"
+      ],
+      "sources": [
+        "description:1"
+      ]
+    },
+    {
+      "group": "evidence",
+      "key": "numbers",
+      "value": [
+        "5"
+      ],
+      "sources": [
+        "commit:5a922e4f05b9624b1f9941a7764446cda0396e0c:0"
+      ]
+    }
+  ]
 }
