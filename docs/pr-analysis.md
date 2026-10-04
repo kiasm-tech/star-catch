@@ -150,18 +150,19 @@ and the article, from the script. That is what "context through classification o
 | Intent | Sentences classed *problem* or *rationale*, quoted |
 | Shape | Components of structural and behavioural units; units added and removed, tests aside |
 | Interactions | Entry points among the changed units; *calls* paths that start at one and cross at least two components |
-| Data | Units of kind *data*, with their change type |
-| Contracts | Behavioural units of kind *interface*, API routes and exported API, and signature changes visible to API consumers; the *breaking* flag |
+| Data | Units of kind *data*, with their change type; a migration's data-only statements (`INSERT`, `UPDATE`, `DELETE`) count as a migration, not an entity change |
+| Contracts | Behavioural units of kind *interface*; signature changes of API routes, exported API or units visible to API consumers; the *breaking* flag |
 | Rules | *Logic* units whose change type is *condition changed*, visible to users or API consumers |
 | Users | *UI* units that are pages; screenshots or preview links from the PR |
 | Rollout | *Configuration* units; the *gated* and *data migration* flags; sentences classed *instruction* |
-| Quality | *Test* units and their *covers* links; CI status, read from the snapshot; the *untested* flag |
+| Quality | *Test* units and their *covers* links; the *untested* flag |
 | Reach | Units that call a behavioural unit (step 8), ordered by the rank of its concern (step 10) |
 | Evidence | Numbers as written in each sentence not classed *noise* — copied, never computed |
 
 A fact is a group, a key and a value, and cites the units or sentences it comes from. Facts follow
-the table's order. Identity and CI status cite neither, so they stay out of the facts and the update
-spec reads them from the snapshot.
+the table's order. Identity cites neither a unit nor a sentence, so it stays out of the facts; the
+update reads number, title and author from the snapshot. CI status and the PR's state are never
+used: an update reads the same before and after the merge.
 
 ---
 

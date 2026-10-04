@@ -21,9 +21,13 @@ export interface FactInput {
 
 const unique = (values: string[]) => [...new Set(values)];
 
+/** `UPDATE …` in a migration: data moves, but no entity changes shape. */
+const DATA_ONLY = /^\s*(insert|update|delete)\b/i;
+
 /**
  * In a fixed order: groups as in FACT_GROUPS, keys as below, then units and sentences in context
- * order (callers by the rank of the concern they call into). A key with nothing to say is left out. Identity and CI come from the snapshot, not here.
+ * order (callers by the rank of the concern they call into). A key with nothing to say is left out.
+ * Identity comes from the snapshot, not here.
  */
 export function factsOf({ units, links, entryPoints, concerns, sentences }: FactInput): Fact[] {
   const changed = units.filter((u) => u.verdict !== "notAChange");
@@ -70,7 +74,7 @@ export function factsOf({ units, links, entryPoints, concerns, sentences }: Fact
     if (new Set(path.map((u) => u.component)).size >= 2) names("interactions", "flow", path);
   }
 
-  const data = changed.filter((u) => kind(u) === "data");
+  const data = changed.filter((u) => kind(u) === "data" && !(u.unitKind === "schemaEntity" && DATA_ONLY.test(u.after ?? u.before ?? "")));
   for (const type of CHANGE_TYPES) names("data", type, data.filter((u) => u.changeType === type));
 
   names(
@@ -79,8 +83,8 @@ export function factsOf({ units, links, entryPoints, concerns, sentences }: Fact
     behavioural.filter(
       (u) =>
         kind(u) === "interface" ||
-        ["apiRoute", "exportedApi"].includes(entryOf.get(u.id) ?? "") ||
-        (u.changeType === "signatureChanged" && u.labels?.visibility === "apiConsumer"),
+        (u.changeType === "signatureChanged" &&
+          (["apiRoute", "exportedApi"].includes(entryOf.get(u.id) ?? "") || u.labels?.visibility === "apiConsumer")),
     ),
   );
   names("contracts", "breaking", risky("breaking"));
