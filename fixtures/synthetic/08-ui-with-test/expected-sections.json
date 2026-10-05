@@ -5,6 +5,7 @@
       "title",
       "problem",
       "changeMap",
+      "fromOutside",
       "verification",
       "wrap"
     ],
