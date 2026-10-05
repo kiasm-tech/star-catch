@@ -99,8 +99,8 @@ export function linksOf(units: Unit[], files: AnalyzeInput["files"]): Link[] {
   return links;
 }
 
-/** Behavioural logic or UI that no test in the PR covers (changes.md §6.1). */
+/** Behavioural logic or UI that no test in the PR covers (changes.md §6.1); removed code can't be. */
 export function untested(unit: Unit, kind: Kind, links: Link[]): boolean {
-  if (unit.verdict !== "behavioural" || (kind !== "logic" && kind !== "ui")) return false;
+  if (unit.verdict !== "behavioural" || unit.changeType === "removed" || (kind !== "logic" && kind !== "ui")) return false;
   return !links.some((l) => l.type === "covers" && l.to === unit.id);
 }

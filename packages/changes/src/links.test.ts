@@ -81,8 +81,9 @@ describe("untested", () => {
     expect(untested(unit("src#f"), "logic", covered)).toBe(false);
   });
 
-  it("leaves other kinds and structural units alone", () => {
+  it("leaves other kinds, structural units and removed code alone", () => {
     expect(untested(unit("src#g"), "configuration", [])).toBe(false);
     expect(untested(unit("src#g", "structural"), "logic", [])).toBe(false);
+    expect(untested({ ...unit("src#g"), changeType: "removed" } as Unit, "logic", [])).toBe(false);
   });
 });
