@@ -7,7 +7,7 @@ import {
   type SectionsExpectation,
 } from "@kiasm-tech/star-catch-contracts";
 import { mockClassifier } from "@star-catch/changes";
-import { loadSyntheticFixtures } from "@star-catch/testkit";
+import { loadRecordedSnapshots, loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
 import { buildContext } from "../usecases/build-context.js";
 import { FactIndex } from "./facts-index.js";
@@ -37,6 +37,17 @@ describe("the section gate", () => {
       const plan = SectionPlanSchema.parse(selectSections(context, cut, { open }));
       expect({ cut, ...asExpectation(plan) }).toEqual({ cut, ...sections![cut] });
     }
+  });
+});
+
+describe("a recorded PR: pmndrs/zustand#3555", () => {
+  // The worked example's PR. Its tests reach the middleware through the exported alias `persist`.
+  it("gets a technical and a business update, with no false risks", async () => {
+    const snapshot = loadRecordedSnapshots().find((s) => s.number === 3555)!;
+    const context = await buildContext(snapshot, { classifier: mockClassifier });
+    const sections = (cut: Cut) => selectSections(context, cut, { open: false }).chapters.flatMap((c) => c.sections.map((s) => s.id));
+    expect(sections("technical")).toEqual(["title", "problem", "changeMap", "verification", "wrap"]);
+    expect(sections("business")).toEqual(["headline", "before", "whatsNew", "wrap"]);
   });
 });
 
