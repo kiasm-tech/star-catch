@@ -8,7 +8,7 @@ import {
 } from "@kiasm-tech/star-catch-contracts";
 import { z } from "zod";
 
-export const ANALYZER_VERSION = "1";
+export const ANALYZER_VERSION = "2";
 
 /** What a file is, from its path and content (changes.md §5.1). The first four leave the analysis. */
 export const FILE_CLASSES = [
@@ -56,6 +56,8 @@ export const UnitSchema = ChangeUnitSchema.extend({
   span: z.object({ base: lineRange.optional(), head: lineRange.optional() }),
   /** Identifiers the head version calls or uses. */
   references: z.array(z.string()).max(MAX_REFERENCES),
+  /** Other names the file exports this declaration under (`export const persist = persistImpl`). */
+  exportedAs: z.array(z.string()).optional(),
 });
 
 export const ChangeSetSchema = z.object({
