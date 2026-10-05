@@ -111,6 +111,7 @@ A chapter with no qualifying section is skipped. The chapter bar only lists chap
 | Structure change | What changed | When relevant | Components added, removed or re-wired | Architecture morph |
 | Contract change | What changed | When relevant | A public API, event or schema changed | Contract card |
 | Data change | What changed | When relevant | A data entity changed | Data model diff |
+| From the outside | How it works | When relevant | A changed entry point: a page, an API route, a command or a job | System sequence diagram |
 | Interaction | How it works | When relevant | A flow of ≥ 3 steps across ≥ 2 components | Sequence diagram |
 | Lifecycle | How it works | When relevant | A state or status was added, or its transitions changed | State machine |
 | Rule | How it works | When relevant | A rule's outcome changed | Decision diagram |
@@ -320,7 +321,7 @@ Same seven chapters, same order, different depth — that's what makes the two c
 | Four tiers (R / P1 / P2 / P3) | Always / When relevant / If room | Easier to reason about, same effect |
 | Nine gates | Five | Speech availability and recipients are runtime concerns, not content rules |
 | Blast radius v0–v3 | One *impact rings* visual | Its data source improves later; the visual doesn't change |
-| 23 technical + 15 business scenes | 14 + 10 sections, 28 visuals | Sections say *what*; visuals say *how it's shown* — kept separate so each can be reused |
+| 23 technical + 15 business scenes | 15 + 10 sections, 28 visuals | Sections say *what*; visuals say *how it's shown* — kept separate so each can be reused |
 
 ---
 
@@ -329,5 +330,6 @@ Same seven chapters, same order, different depth — that's what makes the two c
 | Question | Why it matters |
 |---|---|
 | Are the caps right — business ≤ 2 min, technical ≤ 5 min? | The designs show 1:32 and 3:41; the drafts allowed up to 5 and 7 minutes |
+| Should *Watch out* ask "Did you expect this?" for each new behaviour, with a yes/no answer stored for the author? | Turns the update into a check that the change matches what people expected; planned with reactions and questions, after the scripts |
 | Where do screenshots come from — a preview deploy capture, or images in the PR? | Decides how often the business cut gets a screenshot slider instead of an SSD |
 | May the technical cut use a component's code name ("RateLimiter"), or only a descriptive one ("the rate limiter")? | Sets the altitude check in §12 |
