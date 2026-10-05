@@ -23,7 +23,7 @@ export const WRITER_CUT_PROMPT = `You write the narration for every section of a
 
 ${RULES}
 - The first section says what happened in one sentence; the last recaps in one or two sentences and adds nothing new.
-- Each section's picture shows words ("words": each element id with its current text, quoted from the PR). Rewrite every one for this cut, as "labels": at most 8 words for a box or an arrow, one short sentence for a card. Business cut: what a customer or product owner would recognise, never code, files, functions or component names. Technical cut: parts and behaviour in words, no code syntax. Keep any number exactly as written. Return each id you were given, once.`;
+- Each section's picture shows words ("words": each element id with its current text, quoted from the PR). Rewrite every one for this cut, as "labels": at most 8 words for a box or an arrow, one short sentence for a card. Business cut: what a customer or product owner would recognise, never code, files, functions or component names. Technical cut: parts and behaviour in words, no code syntax. Keep any number exactly as written. Return a label for every id in "words", the title's included, each once.`;
 
 const SentencesSchema = z.array(z.object({ text: z.string().min(1), sources: z.array(z.string()) }));
 const SENTENCES = {
