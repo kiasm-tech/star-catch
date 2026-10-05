@@ -21,6 +21,9 @@ function fakeGitHub(opts: {
   failGraphql?: boolean;
   checks?: { status: string; conclusion: string | null }[] | "error";
   issues?: Record<number, { title: string; body: string | null }>;
+  /** The head tree's entries; "error" makes the call fail. */
+  tree?: { path: string; type: string }[] | "error";
+  treeTruncated?: boolean;
 }) {
   const listFiles = vi.fn();
   const listCommits = vi.fn();
@@ -60,6 +63,12 @@ function fakeGitHub(opts: {
       listCommits,
     },
     graphql,
+    git: {
+      getTree: vi.fn(async () => {
+        if (opts.tree === "error") throw new Error("Not Found");
+        return { data: { tree: opts.tree ?? [], truncated: opts.treeTruncated ?? false } };
+      }),
+    },
     issues: {
       get: vi.fn(async ({ issue_number }: { issue_number: number }) => {
         const issue = opts.issues?.[issue_number];
@@ -263,5 +272,20 @@ describe("fetchPullRequestSnapshot", () => {
     });
     const snap = await fetchPullRequestSnapshot(gh, "acme/api", 7, null);
     expect(snap.ciConclusion).toBe(expected);
+  });
+
+  it("lists every file at the head commit, without folders", async () => {
+    const { gh, raw } = fakeGitHub({ files: [], tree: [{ path: "src", type: "tree" }, { path: "src/a.ts", type: "blob" }, { path: "README.md", type: "blob" }] });
+    const snapshot = await fetchPullRequestSnapshot(gh, "acme/api", 7, null);
+    expect(snapshot.tree).toEqual({ paths: ["src/a.ts", "README.md"], truncated: false });
+    expect(raw.git.getTree).toHaveBeenCalledWith(expect.objectContaining({ tree_sha: "head111", recursive: "1" }));
+  });
+
+  it("caps the tree, says so, and leaves it out when GitHub can't list it", async () => {
+    const many = Array.from({ length: SNAPSHOT_LIMITS.treePaths + 5 }, (_, i) => ({ path: `f${i}.ts`, type: "blob" }));
+    const capped = await fetchPullRequestSnapshot(fakeGitHub({ files: [], tree: many }).gh, "acme/api", 7, null);
+    expect(capped.tree!.paths).toHaveLength(SNAPSHOT_LIMITS.treePaths);
+    expect(capped.tree!.truncated).toBe(true);
+    expect((await fetchPullRequestSnapshot(fakeGitHub({ files: [], tree: "error" }).gh, "acme/api", 7, null)).tree).toBeUndefined();
   });
 });
