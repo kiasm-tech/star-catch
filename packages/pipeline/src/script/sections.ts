@@ -35,6 +35,8 @@ export const SECTION_RULES: SectionRule[] = [
   { id: "structureChange", cut: "technical", chapter: "whatChanged", include: "whenRelevant", precondition: (f) => f.has("shape", "added") || f.has("shape", "removed"), visual: "architectureMorph", estSeconds: 25 },
   { id: "contractChange", cut: "technical", chapter: "whatChanged", include: "whenRelevant", precondition: (f) => f.has("contracts", "changed"), visual: "contractCard", estSeconds: 25 },
   { id: "dataChange", cut: "technical", chapter: "whatChanged", include: "whenRelevant", precondition: (f) => f.has("data"), visual: "dataModelDiff", estSeconds: 25 },
+  // The product as one box between whoever reaches the changed entry point and the answer they get.
+  { id: "fromOutside", cut: "technical", chapter: "howItWorks", include: "whenRelevant", precondition: (f) => f.has("interactions", "entryPoints"), visual: "systemSequenceDiagram", estSeconds: 25 },
   { id: "interaction", cut: "technical", chapter: "howItWorks", include: "whenRelevant", precondition: (f) => f.flows(3).length > 0, visual: "sequenceDiagram", estSeconds: 30 },
   // No fact carries states or data paths yet.
   { id: "lifecycle", cut: "technical", chapter: "howItWorks", include: "whenRelevant", precondition: () => false, visual: "stateMachine", estSeconds: 25 },
