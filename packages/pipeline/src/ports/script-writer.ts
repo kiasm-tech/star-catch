@@ -13,7 +13,7 @@ export interface SectionBrief {
   labels: { id: string; text: string; max: number }[];
   facts: Fact[];
   wordLimit: number;
-  /** Enough to make the point and say what it means; 0 where one line is the point (title, wrap). */
+  /** Enough to make the point and say what it means; a single line for the title and the wrap. */
   minWords: number;
 }
 

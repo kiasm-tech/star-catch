@@ -281,7 +281,7 @@ describe("fuller sections", () => {
     expect(sent.changes[0]).toMatchObject({ name: "bulk discount", change: "a condition in it changed" });
     expect(JSON.stringify(sent.changes.map((c) => c.name))).not.toMatch(/bulkDiscount/);
     const byId = new Map(sent.sections.map((x) => [x.id, x]));
-    expect(byId.get("title")!.minWords).toBe(0);
+    expect(byId.get("title")!.minWords).toBe(Math.min(8, byId.get("title")!.wordLimit));
     expect(byId.get("rule")!.minWords).toBeGreaterThanOrEqual(15);
     expect(byId.get("rule")!.minWords).toBeLessThanOrEqual(byId.get("rule")!.wordLimit);
   });

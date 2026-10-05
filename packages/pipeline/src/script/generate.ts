@@ -111,7 +111,8 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     const scope = SECTION_FACTS[id as keyof typeof SECTION_FACTS];
     const brief: SectionBrief = {
       id,
-      minWords: ONE_LINERS.has(id) ? 0 : Math.min(wordLimit, Math.max(15, Math.round(wordLimit * 0.5))),
+      // A floor of 0 reads as "write nothing"; a one-liner still needs its line.
+      minWords: Math.min(wordLimit, ONE_LINERS.has(id) ? 8 : Math.max(15, Math.round(wordLimit * 0.5))),
       heading: SECTION_TITLES[id as keyof typeof SECTION_TITLES],
       purpose: SECTION_PURPOSES[id as keyof typeof SECTION_PURPOSES],
       visual: built.visual,
