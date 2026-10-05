@@ -12,6 +12,8 @@ export const SNAPSHOT_LIMITS = {
   linkedIssues: 5,
   issueBodyChars: 8_000,
   bodyChars: 20_000,
+  /** File paths kept from the head commit's tree: enough to see a repository's parts. */
+  treePaths: 20_000,
 } as const;
 
 /** Files by extension that are never text: the snapshot skips their contents, analysis excludes them. */
@@ -65,6 +67,8 @@ export const PullRequestSnapshotSchema = z.object({
     }),
   ),
   ciConclusion: z.enum(CI_CONCLUSIONS),
+  /** Every file path at the head commit (not their contents), for the parts around the change. */
+  tree: z.object({ paths: z.array(z.string()).max(SNAPSHOT_LIMITS.treePaths), truncated: z.boolean() }).optional(),
 });
 
 export type PullRequestSnapshot = z.infer<typeof PullRequestSnapshotSchema>;

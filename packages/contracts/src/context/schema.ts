@@ -138,6 +138,13 @@ const contextShape = {
   sentences: z.array(SentenceSchema),
   facts: z.array(FactSchema),
   excluded: z.array(ExcludedSchema),
+  /** The repository around the change: unchanged parts, and which of them the changed files import. */
+  layout: z
+    .object({
+      neighbours: z.array(z.object({ component: z.string().min(1), files: z.number().int().nonnegative() })),
+      uses: z.array(z.object({ from: z.string().min(1), to: z.string().min(1) })),
+    })
+    .optional(),
 };
 
 /** Loose view of either variant; a collection left out of an expectation is not checked. */
