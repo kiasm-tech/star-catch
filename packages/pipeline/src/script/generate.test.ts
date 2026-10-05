@@ -1,0 +1,162 @@
+import { mockClassifier } from "@star-catch/changes";
+import type { Script, Visual } from "@kiasm-tech/star-catch-contracts";
+import { loadRecordedSnapshots, loadSyntheticFixtures } from "@star-catch/testkit";
+import { describe, expect, it } from "vitest";
+import type { Llm, LlmRequest } from "../ports/llm.js";
+import type { ScriptWriter, WrittenSentence } from "../ports/script-writer.js";
+import { buildContext } from "../usecases/build-context.js";
+import { buildScripts } from "../usecases/build-scripts.js";
+import { elementIds } from "../visuals/elements.js";
+import { checkSection } from "./checks.js";
+import { generateScripts } from "./generate.js";
+import { modelWriter, WRITER_PROMPT } from "./model-writer.js";
+import { deCode, templateWriter } from "./template-writer.js";
+
+const fixtures = loadSyntheticFixtures();
+const snapshotOf = (name: string) => fixtures.find((f) => f.name === name)!.snapshot;
+const scriptsOf = (snapshot: unknown, writer: ScriptWriter = templateWriter) => buildScripts(snapshot, { classifier: mockClassifier, writer });
+const sectionsOf = (script: Script) => script.chapters.flatMap((c) => c.sections);
+/** Narration with its marks resolved to element ids, for readable snapshots. */
+const readable = (script: Script) =>
+  [...sectionsOf(script), ...script.draft].map((s) => `${s.id}: ${s.narration.replace(/<mark name="(m\d+)"\/>/g, (_m, name: string) => `[${s.reveals[name]}]`)}`);
+
+describe("generateScripts with the template writer", () => {
+  it.each(fixtures.map((f) => [f.name, f] as const))("%s: the answer key's sections, all narrated and checked", async (_name, { snapshot, sections }) => {
+    const scripts = await scriptsOf(snapshot);
+    for (const cut of ["technical", "business"] as const) {
+      const script = scripts[cut];
+      expect(script === null).toBe(sections![cut] === null);
+      if (!script) continue;
+      expect(sectionsOf(script).filter((s) => !s.article.readMore).map((s) => s.id)).toEqual(sections![cut]!.sections);
+      expect(script.draft.map((d) => d.id)).toEqual(sections![cut]!.draft);
+      expect(script.flags.filter((f) => /dropped|no narration|writer failed|removed a mark/.test(f.message))).toEqual([]);
+      for (const section of [...sectionsOf(script), ...script.draft]) {
+        expect(section.sources.length).toBeGreaterThan(0);
+        const marks = [...section.narration.matchAll(/<mark name="([^"]+)"\/>/g)].map((m) => m[1]);
+        expect(Object.keys(section.reveals)).toEqual([...new Set(marks)]);
+        expect(Object.values(section.reveals).every((id) => elementIds(section.visual).has(id))).toBe(true);
+      }
+    }
+  });
+
+  it.each(loadRecordedSnapshots().map((s) => [`${s.fullName}#${s.number}`, s] as const))("%s: valid scripts, the same both times", async (_name, snapshot) => {
+    expect(await scriptsOf(snapshot)).toEqual(await scriptsOf(snapshot));
+  });
+
+  it("narrates PR #921 the same way every time", async () => {
+    const scripts = await scriptsOf(snapshotOf("15-rate-limit-per-org"));
+    expect({ technical: readable(scripts.technical!), business: readable(scripts.business!) }).toMatchSnapshot();
+  });
+
+  it("narrates 05 and 08 the same way every time", async () => {
+    for (const name of ["05-condition-change", "08-ui-with-test"]) {
+      const scripts = await scriptsOf(snapshotOf(name));
+      expect({ name, technical: readable(scripts.technical!), business: scripts.business && readable(scripts.business) }).toMatchSnapshot();
+    }
+  });
+
+  it("writes the same chapters for an open and a merged PR, and the appendix only while open", async () => {
+    const open = snapshotOf("05-condition-change");
+    const merged = { ...open, state: "closed" as const, merged: true };
+    const [a, b] = [await scriptsOf(open), await scriptsOf(merged)];
+    expect(b.technical!.chapters).toEqual(a.technical!.chapters);
+    expect(a.technical!.draft.map((d) => d.id)).toEqual(["reviewFocus"]);
+    expect(b.technical!.draft).toEqual([]);
+  });
+
+  it("speaks the PR's code names as words", () => {
+    expect(deCode("fix(persist): `clearStorage()` should invalidate concurrent async rehydration")).toBe("clear storage should invalidate concurrent async rehydration");
+    expect(deCode("adds a nullable gift_note column")).toBe("adds a nullable gift note column");
+    expect(deCode("refactor(invoices): rename _gross to _with_vat")).toBe("rename gross to with vat");
+    expect(deCode("Cart.total mixed summing, e.g. in v1.2")).toBe("total mixed summing, e.g. in v1.2");
+  });
+});
+
+describe("the checks", () => {
+  const visual: Visual = {
+    type: "checklist",
+    data: { items: [{ id: "test:a", label: "keeps the discount" }], more: 0 },
+  };
+  const base = { visual, known: new Set(["src/a.ts#f", "description:0", "pr:title"]), evidence: new Set(["5"]), components: ["api", "pricing"], codeNames: ["bulkDiscount", "BillingPage"] };
+  const check = (cut: "technical" | "business", sentences: WrittenSentence[], draft = false) => checkSection({ ...base, cut, draft, sentences });
+  const ok = (text: string): WrittenSentence => ({ text: `<mark name="test:a"/>${text}`, sources: ["src/a.ts#f"] });
+
+  it("keeps a clean, sourced sentence that reveals its element", () => {
+    expect(check("technical", [ok("A test keeps the discount from 5 units.")])).toEqual({ sentences: [ok("A test keeps the discount from 5 units.")], flags: [] });
+  });
+
+  it.each([
+    ["no known source", { text: "It works.", sources: ["nope"] }, "dropped a sentence with no known source"],
+    ["an invented number", { text: "It is 37% faster.", sources: ["src/a.ts#f"] }, "dropped a sentence with a number that isn't evidence (37%)"],
+    ["a file path", { text: "See src/pricing/discount.ts for it.", sources: ["src/a.ts#f"] }, "dropped a sentence that names a file path"],
+    ["call syntax", { text: "It calls bulkDiscount() now.", sources: ["src/a.ts#f"] }, "dropped a sentence that names code"],
+    ["the PR's own code name", { text: "The BillingPage shows the date.", sources: ["src/a.ts#f"] }, "dropped a sentence that names a code name"],
+  ])("drops a sentence with %s", (_name, sentence, flag) => {
+    const { sentences, flags } = check("technical", [sentence as WrittenSentence]);
+    expect(sentences).toEqual([]);
+    expect(flags[0]).toMatch(new RegExp(`^${flag.replace(/[()%]/g, "\\$&")}`));
+  });
+
+  it("allows brand names and code names where they belong", () => {
+    expect(check("technical", [ok("GraphQL and REST now share one limit.")]).flags).toEqual([]);
+    expect(check("technical", [ok("Look at BillingPage first.")], true).sentences).toHaveLength(1);
+  });
+
+  it("keeps folder names out of the business cut, and flags acronyms there", () => {
+    expect(check("business", [ok("The api now checks it.")]).flags[0]).toMatch(/component name "api"/);
+    const acronym = check("business", [ok("Every API key shares one limit.")]);
+    expect(acronym.sentences).toHaveLength(1);
+    expect(acronym.flags).toEqual(["acronym without a glossary card: API"]);
+  });
+
+  it("removes a mark for an element the visual doesn't have, and flags what's never revealed", () => {
+    const { sentences, flags } = check("technical", [{ text: '<mark name="ghost"/>It keeps the discount.', sources: ["src/a.ts#f"] }]);
+    expect(sentences[0]!.text).toBe("It keeps the discount.");
+    expect(flags).toEqual(["removed a mark for an element the visual doesn't have: ghost", "never revealed by the narration: test:a"]);
+  });
+
+  it("trims a section that runs over a minute", () => {
+    const long = Array.from({ length: 4 }, () => ok(`${"word ".repeat(60).trim()}.`));
+    const { sentences, flags } = check("technical", long);
+    expect(sentences).toHaveLength(2);
+    expect(flags).toContain("trimmed to stay under a minute");
+  });
+});
+
+describe("writers", () => {
+  it("flags a section whose writer fails, and keeps going", async () => {
+    let calls = 0;
+    const failing: ScriptWriter = {
+      id: "failing",
+      write: async (request) => {
+        calls++;
+        if (request.section.id === "rule") throw new Error("timeout");
+        return templateWriter.write(request);
+      },
+    };
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), failing);
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "the writer failed: timeout" });
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
+    expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length);
+  });
+
+  it("asks the model once per section with the prompt and the schema, and flags an unusable answer", async () => {
+    const requests: LlmRequest[] = [];
+    const llm: Llm = {
+      completeJson: async (request) => {
+        requests.push(request);
+        const { section } = JSON.parse(request.user) as { section: string };
+        return section === "Rule" ? { nope: true } : { sentences: [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }] };
+      },
+    };
+    const writer = modelWriter(llm, "gpt-6-luna");
+    expect(writer.id).toMatch(/^model:gpt-6-luna@writer-[0-9a-f]{8}$/);
+    const snapshot = snapshotOf("05-condition-change");
+    const context = await buildContext(snapshot, { classifier: mockClassifier });
+    const scripts = await generateScripts(context, { fullName: snapshot.fullName, number: snapshot.number, title: snapshot.title }, { writer, open: false });
+    expect(requests).toHaveLength(sectionsOf(scripts.technical!).length + sectionsOf(scripts.business!).length);
+    expect(requests.every((r) => r.system === WRITER_PROMPT)).toBe(true);
+    expect(JSON.parse(requests[0]!.user)).toMatchObject({ cut: "technical", section: "Title & summary", picture: { type: "titleCard" } });
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "the writer failed: the model's answer didn't match the schema" });
+  });
+});
