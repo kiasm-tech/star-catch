@@ -7,7 +7,7 @@ import type { ScriptWriter, WrittenSentence } from "../ports/script-writer.js";
 import { buildContext } from "../usecases/build-context.js";
 import { buildScripts } from "../usecases/build-scripts.js";
 import { elementIds } from "../visuals/elements.js";
-import { checkSection } from "./checks.js";
+import { checkSection, labelProblem } from "./checks.js";
 import { generateScripts } from "./generate.js";
 import { modelWriter, WRITER_CUT_PROMPT } from "./model-writer.js";
 import { deCode, templateWriter } from "./template-writer.js";
@@ -183,10 +183,11 @@ describe("writers", () => {
     const repairs: string[][] = [];
     const writer: ScriptWriter = {
       id: "fake",
-      writeCut: async ({ sections }) =>
-        Object.fromEntries(
+      writeCut: async ({ sections }) => ({
+        sections: Object.fromEntries(
           sections.map((x) => [x.id, [{ text: x.id === "rule" ? "The bulkDiscount threshold moved." : "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]]),
         ),
+      }),
       write: async (request) => {
         repairs.push(request.repair ?? []);
         return [{ text: "The threshold for the bulk discount moved.", sources: ["pr:title"] }];
@@ -198,4 +199,46 @@ describe("writers", () => {
     expect(scripts.technical!.flags.filter((f) => f.sectionId === "rule" && f.message.startsWith("dropped"))).toEqual([]);
   });
 
+});
+
+describe("the picture's words", () => {
+  const sentence = [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }];
+  const relabelling = (label: (id: string) => string): ScriptWriter => ({
+    id: "fake",
+    writeCut: async ({ sections }) => ({
+      sections: Object.fromEntries(sections.map((x) => [x.id, sentence])),
+      labels: Object.fromEntries(sections.map((x) => [x.id, Object.fromEntries(x.labels.map((l) => [l.id, label(l.id)]))])),
+    }),
+    write: async () => sentence,
+  });
+
+  it("puts the writer's labels in the picture, the business title too", async () => {
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), relabelling((id) => `plain words for ${id.split(":")[0]}`));
+    const business = sectionsOf(scripts.business!);
+    const title = business[0]!.visual as Extract<Visual, { type: "titleCard" }>;
+    expect(title.data.title).toBe("plain words for title");
+    const journey = business.find((x) => x.visual.type === "userJourney")!.visual as Extract<Visual, { type: "userJourney" }>;
+    expect(journey.data.steps.every((s) => s.label === "plain words for step")).toBe(true);
+    expect(scripts.business!.flags.filter((f) => f.message.startsWith("kept the picture"))).toEqual([]);
+  });
+
+  it("keeps the picture's own words where a label fails the checks", async () => {
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), relabelling((id) => (id.startsWith("rule:") ? "the bulkDiscount rule" : "from 7 units")));
+    const rule = sectionsOf(scripts.technical!).find((x) => x.id === "rule")!.visual as Extract<Visual, { type: "decisionDiagram" }>;
+    expect(rule.data.subject.label).toBe("bulk discount");
+    expect(rule.data.after.condition).toBe("quantity >= 5");
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: `kept the picture's own words for ${rule.data.subject.id}: it names a code name` });
+    expect(scripts.business!.flags.some((f) => f.message.endsWith("it has a number that isn't evidence (7)"))).toBe(true);
+  });
+
+  it("rejects labels that are empty, too long, marked, code, or carry new numbers", () => {
+    const base = { cut: "business" as const, original: "Orders of 10 or more", max: 80, evidence: new Set(["5"]), components: ["pricing"], codeNames: ["bulkDiscount"] };
+    expect(labelProblem({ ...base, text: "Orders of 5 or more get the discount" })).toBeUndefined();
+    expect(labelProblem({ ...base, text: "Orders of 10 or more" })).toBeUndefined();
+    expect(labelProblem({ ...base, text: " " })).toBe("it's empty");
+    expect(labelProblem({ ...base, text: "x".repeat(81) })).toBe("it's longer than 80 characters");
+    expect(labelProblem({ ...base, text: 'a <mark name="m1"/> b' })).toBe("it has a mark");
+    expect(labelProblem({ ...base, text: "calls bulkDiscount()" })).toBe("it names code");
+    expect(labelProblem({ ...base, text: "Orders of 7 or more" })).toBe("it has a number that isn't evidence (7)");
+  });
 });

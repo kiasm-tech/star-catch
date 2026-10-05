@@ -102,3 +102,28 @@ export function checkSection({ cut, draft, sentences, visual, known, evidence, c
 }
 
 export { wordCount };
+
+export interface LabelInput {
+  cut: Cut;
+  text: string;
+  /** What the element said before: its numbers may stay. */
+  original: string;
+  max: number;
+  evidence: Set<string>;
+  components: string[];
+  codeNames: string[];
+}
+
+/** Why a writer's label for an element can't replace the original, if it can't. */
+export function labelProblem({ cut, text, original, max, evidence, components, codeNames }: LabelInput): string | undefined {
+  const label = text.trim();
+  if (!label) return "it's empty";
+  if (label.length > max) return `it's longer than ${max} characters`;
+  if (/<mark /.test(label)) return "it has a mark";
+  const wrong = altitude(label, cut, components, codeNames);
+  if (wrong) return `it names ${wrong}`;
+  const allowed = new Set([...evidence, ...numbersIn(original)]);
+  const invented = numbersIn(label).filter((n) => !allowed.has(n));
+  if (invented.length > 0) return `it has a number that isn't evidence (${invented.join(", ")})`;
+  return undefined;
+}

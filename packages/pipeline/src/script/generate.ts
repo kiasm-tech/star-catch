@@ -12,8 +12,9 @@ import {
 import type { ScriptWriter, SectionBrief, WrittenSentence } from "../ports/script-writer.js";
 import { buildVisual, type PrInfo, type VisualInput } from "../visuals/build.js";
 import { revealable } from "../visuals/elements.js";
-import { deCode } from "../visuals/words.js";
-import { checkSection, wordCount, type Checked } from "./checks.js";
+import { labelsOf, mapLabels } from "../visuals/labels.js";
+import { clip, deCode } from "../visuals/words.js";
+import { checkSection, labelProblem, wordCount, type Checked } from "./checks.js";
 import { CHAPTER_TITLES, SECTION_FACTS, SECTION_PURPOSES, SECTION_TITLES } from "./sections.js";
 import { CAP_SECONDS, WORDS_PER_MINUTE, selectSections } from "./select.js";
 
@@ -77,6 +78,7 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
       purpose: SECTION_PURPOSES[id as keyof typeof SECTION_PURPOSES],
       visual: built.visual,
       elements: revealable(built.visual).map((e) => ({ ...e, label: deCode(e.label) })),
+      labels: labelsOf(built.visual, cut).map((l) => ({ ...l, text: deCode(l.text) })),
       facts: context.facts
         .filter((f) => scope.some((s) => s === f.group || s === `${f.group}.${f.key}`))
         .map((f) => ({ ...f, value: typeof f.value === "string" ? deCode(f.value) : Array.isArray(f.value) ? f.value.map(deCode) : f.value })),
@@ -87,10 +89,12 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
 
   const shared = { cut, sentences, pr: { title: pr.title }, ...(options.instruction && { instruction: options.instruction }) };
   const first = new Map<string, WrittenSentence[]>();
+  const relabels = new Map<string, Record<string, string>>();
   if (options.writer.writeCut) {
     try {
       const all = await options.writer.writeCut({ ...shared, sections: planned.map((p) => p.brief) }, options.signal);
-      for (const p of planned) first.set(p.brief.id, all[p.brief.id] ?? []);
+      for (const p of planned) first.set(p.brief.id, all.sections[p.brief.id] ?? []);
+      for (const [id, labels] of Object.entries(all.labels ?? {})) relabels.set(id, labels);
     } catch (error) {
       fail("script", error);
     }
@@ -108,6 +112,20 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     checkSection({ cut, draft: p.draft, sentences: written, visual: p.brief.visual, known, evidence, components, codeNames, wordLimit: p.brief.wordLimit });
   const dropped = (c: Checked) => c.flags.filter((f) => f.startsWith("dropped"));
 
+  /** The picture in the writer's words where they pass the checks; else its own, code spelled out for business. */
+  const pictureOf = (p: Planned): ScriptSection["visual"] => {
+    const originals = new Map(labelsOf(p.brief.visual, cut).map((l) => [l.id, l]));
+    const accepted = new Map<string, string>();
+    for (const [id, text] of Object.entries(relabels.get(p.brief.id) ?? {})) {
+      const original = originals.get(id);
+      if (!original) continue;
+      const problem = labelProblem({ cut, text, original: original.text, max: original.max, evidence, components, codeNames });
+      if (problem) flags.push({ sectionId: p.brief.id, message: `kept the picture's own words for ${id}: ${problem}` });
+      else accepted.set(id, text.trim());
+    }
+    return mapLabels(p.brief.visual, cut, (id, text) => accepted.get(id) ?? (cut === "business" ? clip(deCode(text), originals.get(id)!.max) : text));
+  };
+
   const sections = new Map<string, ScriptSection>();
   for (const p of planned) {
     let checked = check(p, first.get(p.brief.id) ?? []);
@@ -123,7 +141,7 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     flags.push(...[...p.visualFlags, ...checked.flags].map((message) => ({ sectionId: p.brief.id, message })));
     sections.set(p.brief.id, {
       id: p.brief.id,
-      visual: p.brief.visual,
+      visual: pictureOf(p),
       ...voiceMarks(checked.sentences),
       sources: [...new Set(checked.sentences.flatMap((s) => s.sources))],
       article: { heading: p.brief.heading, readMore: p.readMore },
