@@ -28,6 +28,35 @@ export const CHAPTER_TITLES: Record<ChapterId, string> = {
 
 const ruleChanged = (f: FactIndex) => f.has("rules", "conditionChanged");
 
+/** Section headings in the article, as named in §6–§7. */
+export const SECTION_TITLES: Record<SectionId | DraftSectionId, string> = {
+  title: "Title & summary",
+  problem: "The problem",
+  changeMap: "Change map",
+  structureChange: "Structure change",
+  contractChange: "Contract change",
+  dataChange: "Data change",
+  fromOutside: "From the outside",
+  interaction: "Interaction",
+  lifecycle: "Lifecycle",
+  rule: "Rule",
+  dataFlow: "Data flow",
+  reach: "Reach",
+  verification: "Verification",
+  risksRollout: "Risks & rollout",
+  wrap: "Wrap",
+  headline: "Headline",
+  before: "Before",
+  whatsNew: "What's new",
+  howItWorksForYou: "How it works for you",
+  theRuleNow: "The rule now",
+  whoItAffects: "Who it affects",
+  inNumbers: "In numbers",
+  whatToKnow: "What to know",
+  whatYouMayNeedToDo: "What you may need to do",
+  reviewFocus: "Review focus",
+};
+
 export const SECTION_RULES: SectionRule[] = [
   { id: "title", cut: "technical", chapter: "opening", include: "always", visual: "titleCard", estSeconds: 10 },
   { id: "problem", cut: "technical", chapter: "why", include: "whenRelevant", precondition: (f) => f.has("intent", "problem"), visual: "beforeAfterSplit", estSeconds: 20 },
