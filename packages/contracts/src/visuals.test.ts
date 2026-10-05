@@ -20,6 +20,14 @@ describe("VisualSchema", () => {
     expect(VisualSchema.safeParse({ type: "componentMap", data: { nodes: nodes(1), edges: [] } }).success).toBe(true);
   });
 
+  it("opens a single component into at most seven changes", () => {
+    const change = { file: "src/cart/totals.ts", name: "item total", change: "renamed" };
+    const opened = (n: number) => ({ type: "componentMap", data: { nodes: [{ ...nodes(1)[0], changes: Array.from({ length: n }, () => change) }], edges: [] } });
+    expect(VisualSchema.safeParse(opened(7)).success).toBe(true);
+    expect(VisualSchema.safeParse(opened(8)).success).toBe(false);
+    expect(VisualSchema.safeParse({ ...opened(1), data: { ...opened(1).data, nodes: [{ ...nodes(1)[0], changes: [{ ...change, change: "edited" }] }] } }).success).toBe(false);
+  });
+
   it("counts messages and outcomes together in a system sequence diagram", () => {
     const participants = [
       { id: "actor", label: "API client", x: 150, role: "actor" },
