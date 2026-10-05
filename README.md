@@ -34,6 +34,35 @@ The real classifier needs `STAR_CATCH_CLASSIFIER_MODEL` and `ANTHROPIC_API_KEY`,
 
 Dependency rules: [test/architecture.test.ts](test/architecture.test.ts), mirrored in ESLint.
 
+## Publishing the contracts package
+
+`@kiasm-tech/star-catch-contracts` (`packages/contracts`) is what Crux installs from GitHub
+Packages. `.github/workflows/publish-contracts.yml` publishes it when a `contracts-v<version>` tag is
+pushed; the tag must match `packages/contracts/package.json`.
+
+1. Bump `version` in `packages/contracts/package.json`, commit, and push the branch:
+   `git push -u origin <branch>`.
+2. Tag that commit and push the tag:
+   ```sh
+   git tag contracts-v<version> <branch>
+   git push origin contracts-v<version>
+   ```
+3. Watch the run:
+   ```sh
+   gh run watch -R kiasm-tech/star-catch "$(gh run list -R kiasm-tech/star-catch --workflow publish-contracts.yml -L 1 --json databaseId -q '.[0].databaseId')"
+   ```
+4. Check the version is there (`gh auth refresh -s read:packages` if `gh` lacks the scope):
+   `gh api /orgs/kiasm-tech/packages/npm/star-catch-contracts/versions --jq '.[].name'`.
+
+Set up once, already done for Crux:
+
+5. Package settings → *Manage Actions access* → add `kiasm-tech/crux` with **Read**, so Crux's CI
+   installs with its own `GITHUB_TOKEN`.
+6. A classic token with only `read:packages` (SSO-authorised for kiasm-tech) for everything else:
+   `export NPM_TOKEN=…` in your shell, and `firebase apphosting:secrets:set NPM_TOKEN` for Crux's
+   App Hosting builds.
+7. Check it: `npm view @kiasm-tech/star-catch-contracts versions --registry=https://npm.pkg.github.com --//npm.pkg.github.com/:_authToken="$NPM_TOKEN"`.
+
 ## Docs
 
 | Doc | Read it for |
