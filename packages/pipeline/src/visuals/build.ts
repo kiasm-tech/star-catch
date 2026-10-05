@@ -403,7 +403,8 @@ const businessRisks: Builder = (s, _input, flags) => {
   const cards = [
     ...(s.facts.has("contracts", "breaking") ? [{ id: "risk:breaking", kind: "breaking" as const, risk: "Existing integrations may need to change", mitigation: null }] : []),
     ...(s.facts.has("rollout", "gated") ? [{ id: "risk:flag", kind: "flag" as const, risk: "It arrives switched off and is turned on later", mitigation: null }] : []),
-    ...(s.facts.has("rules") ? [{ id: "risk:rules", kind: "behaviour" as const, risk: `How ${subject("rules")} works has changed`, mitigation: null }] : []),
+    // The PR's own statement of what changed; a unit's name would mislead (#921 isn't about "create order").
+    ...(s.facts.has("rules") ? [{ id: "risk:rules", kind: "behaviour" as const, risk: s.statement() ? clip(s.statement()!.text, 160) : `How ${subject("rules")} works has changed`, mitigation: null }] : []),
     ...(s.facts.has("contracts", "changed") ? [{ id: "risk:contracts", kind: "behaviour" as const, risk: `What ${subject("contracts")} accepts or returns has changed`, mitigation: null }] : []),
   ];
   return { type: "riskCards", data: { cards: top(cards, "notices", flags) } };
