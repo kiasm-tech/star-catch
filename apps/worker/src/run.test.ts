@@ -1,5 +1,5 @@
 import { connect, migrate, type StarCatchDb } from "@star-catch/adapters";
-import { INGEST_QUEUE, ingestKey, type IngestJob } from "@star-catch/pipeline";
+import { GENERATE_QUEUE, INGEST_QUEUE, ingestKey, type IngestJob } from "@star-catch/pipeline";
 import { freshDatabase, type TestDatabase } from "@star-catch/testkit";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compose, type Worker } from "./compose.js";
@@ -25,7 +25,7 @@ beforeAll(async () => {
   database = await freshDatabase();
   db = connect(database.url);
   await migrate(db);
-  worker = await compose({ DATABASE_URL: database.url, STAR_CATCH_MOCK_GITHUB: "true", STAR_CATCH_REPOS: "pmndrs/zustand" });
+  worker = await compose({ DATABASE_URL: database.url, STAR_CATCH_MOCK_GITHUB: "true", STAR_CATCH_MOCK_LLM: "true", STAR_CATCH_REPOS: "pmndrs/zustand" });
 });
 
 afterAll(async () => {
@@ -37,18 +37,23 @@ afterAll(async () => {
 const send = (job: IngestJob) => worker.queue.send(INGEST_QUEUE.name, job, { singletonKey: ingestKey(job) });
 
 describe("runWorker", () => {
-  it("drains the ingest queue into snapshots and stops", async () => {
+  it("drains the ingest queue into snapshots, then the snapshots into catches, and stops", async () => {
     logs = [];
     await send(recorded);
     await send({ ...recorded, deliveryId: "d-2", fullName: "acme/elsewhere", headSha: "b".repeat(40) });
 
-    expect(await runWorker(worker, { watch: false, log })).toBe(2);
+    expect(await runWorker(worker, { watch: false, log })).toBe(3);
     expect(logs).toEqual([
       { queue: INGEST_QUEUE.name, deliveryId: "d-1", outcome: "stored" },
       { queue: INGEST_QUEUE.name, deliveryId: "d-2", outcome: "repo-disabled" },
+      { queue: GENERATE_QUEUE.name, pr: "pmndrs/zustand@30ad99f", outcome: "generated" },
     ]);
     const rows = await db.selectFrom("star_catch.pr_snapshots").select(["repo", "head_sha", "pr_number"]).execute();
     expect(rows).toEqual([{ repo: "pmndrs/zustand", head_sha: recorded.headSha, pr_number: 3469 }]);
+    const catches = await db.selectFrom("star_catch.catch_versions").select(["catch_id", "head_sha"]).execute();
+    expect(catches).toEqual([{ catch_id: "pmndrs__zustand__3469", head_sha: recorded.headSha }]);
+    const runs = await db.selectFrom("star_catch.catch_runs").select(["status", "step"]).execute();
+    expect(runs).toEqual([{ status: "done", step: "save" }]);
     expect(await runWorker(worker, { watch: false, log })).toBe(0);
   });
 
@@ -67,9 +72,10 @@ describe("runWorker", () => {
     const running = runWorker(worker, { watch: true, pollMs: 20, signal: stopping.signal, log });
     await new Promise((resolve) => setTimeout(resolve, 100));
     await send({ ...recorded, deliveryId: "d-4", headSha: "d".repeat(40) });
-    await expect.poll(() => logs.length, { timeout: 5_000 }).toBe(1);
+    // Its snapshot is the recorded one, already stored: the catch is built again, not the snapshot.
+    await expect.poll(() => logs.length, { timeout: 10_000 }).toBe(2);
     stopping.abort();
-    expect(await running).toBe(1);
+    expect(await running).toBe(2);
   });
 });
 
@@ -82,5 +88,9 @@ describe("compose", () => {
     await expect(compose({ DATABASE_URL: "postgres://unused", STAR_CATCH_MOCK_GITHUB: "false" })).rejects.toThrow(
       "GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY",
     );
+  });
+
+  it("needs the models outside mock mode", async () => {
+    await expect(compose({ DATABASE_URL: "postgres://unused", STAR_CATCH_MOCK_GITHUB: "true", STAR_CATCH_MOCK_LLM: "false" })).rejects.toThrow("STAR_CATCH_CLASSIFIER_MODEL");
   });
 });

@@ -7,8 +7,11 @@ export const INGEST_QUEUE: QueueSpec = { name: "star-catch.ingest", retryLimit: 
 /** Crux consumes it; whichever side starts first creates it with this spec. */
 export const CRUX_GITHUB_EVENT_QUEUE: QueueSpec = { name: CRUX_GITHUB_EVENT, retryLimit: 5, deduplicate: false };
 
+/** A stored snapshot to turn into a catch; a model run, so retried sparingly. */
+export const GENERATE_QUEUE: QueueSpec = { name: "star-catch.generate", retryLimit: 2, deduplicate: true };
+
 /** Every queue the backend sends to or takes from. */
-export const QUEUES: readonly QueueSpec[] = [INGEST_QUEUE, CRUX_GITHUB_EVENT_QUEUE];
+export const QUEUES: readonly QueueSpec[] = [INGEST_QUEUE, GENERATE_QUEUE, CRUX_GITHUB_EVENT_QUEUE];
 
 /** A pull request to snapshot, with what the filters need from its delivery. */
 export const IngestJobSchema = z.object({
@@ -27,3 +30,11 @@ export type IngestJob = z.infer<typeof IngestJobSchema>;
 export function ingestKey(job: Pick<IngestJob, "fullName" | "headSha">): string {
   return `${repoKey(job.fullName)}@${job.headSha}`;
 }
+
+/** A stored snapshot, by repo, PR and the head commit it was taken at. */
+export const GenerateJobSchema = z.object({
+  fullName: z.string().regex(/^[^/\s]+\/[^/\s]+$/),
+  number: z.number().int().positive(),
+  headSha: z.string().min(7),
+});
+export type GenerateJob = z.infer<typeof GenerateJobSchema>;

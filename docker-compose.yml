@@ -55,6 +55,7 @@ services:
     environment:
       <<: *env
       STAR_CATCH_MOCK_GITHUB: "true"
+      STAR_CATCH_MOCK_LLM: "true"
       STAR_CATCH_REPOS: pmndrs/zustand
     depends_on:
       migrate:
