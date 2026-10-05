@@ -28,6 +28,64 @@ export const CHAPTER_TITLES: Record<ChapterId, string> = {
 
 const ruleChanged = (f: FactIndex) => f.has("rules", "conditionChanged");
 
+/** The one question each section answers (§5 chapters, §6–§7 rows): the writer says that and nothing else. */
+export const SECTION_PURPOSES: Record<SectionId | DraftSectionId, string> = {
+  title: "In one sentence, what happened.",
+  problem: "What was wrong before, then what is different now. Nothing about how.",
+  changeMap: "Which parts of the system changed. Name them; no reasons.",
+  structureChange: "What was added or removed, and what now connects to it.",
+  contractChange: "What callers send or get back now that they didn't before.",
+  dataChange: "Which data changed shape, and how.",
+  fromOutside: "What someone outside sees: what they send and the answers they get.",
+  interaction: "The steps inside the system, in order.",
+  lifecycle: "Which states something goes through now.",
+  rule: "The rule that decides the outcome, before and after.",
+  dataFlow: "Where the data goes, step by step.",
+  reach: "What else depends on the change.",
+  verification: "What the tests in this change prove.",
+  risksRollout: "What could go wrong when it ships, and how that's handled.",
+  wrap: "One or two sentences to remember. Nothing new.",
+  headline: "In one sentence, what changes for people.",
+  before: "What was painful or wrong for people before.",
+  whatsNew: "What people get now.",
+  howItWorksForYou: "What people do now, step by step.",
+  theRuleNow: "The rule now, in everyday words.",
+  whoItAffects: "Who is affected.",
+  inNumbers: "The one real number and what it means.",
+  whatToKnow: "What to be aware of; say plainly if there's nothing to do.",
+  whatYouMayNeedToDo: "What someone has to do, and who.",
+  reviewFocus: "Where a reviewer should look first.",
+};
+
+/** The facts each section is about: the writer sees these, not the whole context. */
+export const SECTION_FACTS: Record<SectionId | DraftSectionId, string[]> = {
+  title: ["intent"],
+  problem: ["intent"],
+  changeMap: ["shape.components"],
+  structureChange: ["shape.added", "shape.removed", "reach"],
+  contractChange: ["contracts"],
+  dataChange: ["data", "rollout.migration"],
+  fromOutside: ["interactions.entryPoints", "intent.rationale"],
+  interaction: ["interactions"],
+  lifecycle: ["data"],
+  rule: ["rules", "evidence", "intent.rationale"],
+  dataFlow: ["interactions", "data"],
+  reach: ["reach", "interactions.entryPoints"],
+  verification: ["quality.tests", "quality.covered"],
+  risksRollout: ["rollout", "contracts.breaking", "quality.untested"],
+  wrap: ["intent"],
+  headline: ["intent"],
+  before: ["intent.problem", "interactions.entryPoints"],
+  whatsNew: ["intent.rationale", "interactions.entryPoints", "users"],
+  howItWorksForYou: ["interactions", "users"],
+  theRuleNow: ["rules", "evidence", "intent.rationale"],
+  whoItAffects: ["interactions.entryPoints", "users"],
+  inNumbers: ["evidence"],
+  whatToKnow: ["contracts", "rules", "rollout", "intent.rationale"],
+  whatYouMayNeedToDo: ["rollout.instruction"],
+  reviewFocus: ["shape", "quality.untested"],
+};
+
 /** Section headings in the article, as named in §6–§7. */
 export const SECTION_TITLES: Record<SectionId | DraftSectionId, string> = {
   title: "Title & summary",
