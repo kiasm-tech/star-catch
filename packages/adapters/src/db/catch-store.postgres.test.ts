@@ -31,7 +31,9 @@ describe("PostgresCatchStore", () => {
     await store.save(first, "sha-1");
     await store.save(second, "sha-2");
     await store.save(second, "sha-2");
-    expect(CatchVersionSchema.parse(await store.latest(first.catchId)).pr.title).toBe("A newer push");
+    const latest = await store.latest(first.catchId);
+    expect(latest).toMatchObject({ headSha: "sha-2", generatedAt: expect.any(Date) });
+    expect(CatchVersionSchema.parse(latest!.version).pr.title).toBe("A newer push");
     const rows = await db.selectFrom("star_catch.catch_versions").select("head_sha").where("catch_id", "=", first.catchId).execute();
     expect(rows.map((r) => r.head_sha).sort()).toEqual(["sha-1", "sha-2"]);
     expect(await store.latest("acme__shop__999")).toBeNull();
@@ -43,7 +45,7 @@ describe("PostgresCatchStore", () => {
     const other = { ...older, catchId: "acme__other__3", pr: { ...older.pr, fullName: "acme/other" } };
     await store.save(older, "sha-a");
     await store.save(other, "sha-b");
-    const listed = (await store.list(["Acme/Shop"])).map((v) => CatchVersionSchema.parse(v).catchId);
+    const listed = (await store.list(["Acme/Shop"])).map((v) => CatchVersionSchema.parse(v.version).catchId);
     expect(listed[0]).toBe(older.catchId);
     expect(listed).toContain("acme__shop__105");
     expect(listed).not.toContain("acme__other__3");

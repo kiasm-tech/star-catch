@@ -1,7 +1,9 @@
 import { repoKey, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
-import type { CatchStore, RunLog, RunStatus } from "@star-catch/pipeline";
+import type { CatchStore, RunLog, RunStatus, StoredVersion } from "@star-catch/pipeline";
 import type { StarCatchDb } from "./database.js";
 import { toJsonb } from "./jsonb.js";
+
+const stored = (row: { head_sha: string; created_at: Date; version: unknown }): StoredVersion => ({ headSha: row.head_sha, generatedAt: row.created_at, version: row.version });
 
 export class PostgresCatchStore implements CatchStore {
   constructor(private readonly db: StarCatchDb) {}
@@ -15,21 +17,21 @@ export class PostgresCatchStore implements CatchStore {
       .execute();
   }
 
-  async latest(catchId: string): Promise<unknown> {
+  async latest(catchId: string): Promise<StoredVersion | null> {
     const row = await this.db
       .selectFrom("star_catch.catch_versions")
-      .select("version")
+      .select(["head_sha", "created_at", "version"])
       .where("catch_id", "=", catchId)
       .orderBy("created_at", "desc")
       .executeTakeFirst();
-    return row?.version ?? null;
+    return row ? stored(row) : null;
   }
 
-  async list(repos: string[], limit = 200): Promise<unknown[]> {
+  async list(repos: string[], limit = 200): Promise<StoredVersion[]> {
     if (repos.length === 0) return [];
     const latest = await this.db
       .selectFrom("star_catch.catch_versions")
-      .select(["catch_id", "created_at", "version"])
+      .select(["catch_id", "head_sha", "created_at", "version"])
       .distinctOn("catch_id")
       .where("repo", "in", repos.map(repoKey))
       .orderBy("catch_id")
@@ -38,7 +40,7 @@ export class PostgresCatchStore implements CatchStore {
     return latest
       .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
       .slice(0, limit)
-      .map((row) => row.version);
+      .map(stored);
   }
 }
 

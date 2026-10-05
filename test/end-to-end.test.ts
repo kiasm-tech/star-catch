@@ -58,7 +58,7 @@ describe("a pull request from webhook to catch", () => {
 
     const recorded = loadRecordedSnapshots().find((s) => s.number === 3469)!;
     expect(await new PostgresSnapshotStore(db).find("pmndrs/zustand", recorded.headSha)).toEqual(recorded);
-    expect(await new PostgresCatchStore(db).latest("pmndrs__zustand__3469")).toMatchObject({ pr: { fullName: "pmndrs/zustand", number: 3469 } });
+    expect(await new PostgresCatchStore(db).latest("pmndrs__zustand__3469")).toMatchObject({ version: { pr: { fullName: "pmndrs/zustand", number: 3469 } } });
   });
 
   it("does not snapshot the same head commit from a second delivery", async () => {

@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "cli": "tsx apps/cli/src/main.ts",
+    "api": "tsx apps/api/src/main.ts",
     "intake": "tsx apps/intake/src/main.ts",
     "worker": "tsx apps/worker/src/main.ts",
     "replay": "tsx apps/cli/src/main.ts replay",

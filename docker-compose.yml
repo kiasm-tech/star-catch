@@ -48,6 +48,25 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # What Crux reads: STAR_CATCH_API_URL=http://localhost:8081, STAR_CATCH_API_TOKEN=dev.
+  api:
+    <<: *backend
+    command: api
+    environment:
+      <<: *env
+      STAR_CATCH_API_TOKEN: ${STAR_CATCH_API_TOKEN:-dev}
+      STAR_CATCH_REPOS: pmndrs/zustand
+    ports:
+      - "${STAR_CATCH_API_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   # Recorded snapshots instead of GitHub: replay fixtures/webhooks/* to drive it.
   worker:
     <<: *backend

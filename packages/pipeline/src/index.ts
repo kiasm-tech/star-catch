@@ -3,7 +3,7 @@ export type { DeliveryStatus, DeliveryStore, WebhookDelivery } from "./ports/del
 export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
 export type { RepoSettings, RepoSettingsStore } from "./ports/repo-settings.js";
-export type { CatchStore, RunLog, RunStatus } from "./ports/catch-store.js";
+export type { CatchStore, RunLog, RunStatus, StoredVersion } from "./ports/catch-store.js";
 export {
   CRUX_GITHUB_EVENT_QUEUE,
   GENERATE_QUEUE,
