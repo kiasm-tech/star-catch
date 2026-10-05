@@ -1,7 +1,9 @@
 /** A deterministic writer: narrates each visual from its own elements and the facts. Offline, and in every test. */
 import type { FactGroup, Visual } from "@kiasm-tech/star-catch-contracts";
 import type { ScriptWriter, WriteRequest, WrittenSentence } from "../ports/script-writer.js";
-import { humanize, plainTitle } from "../visuals/words.js";
+import { deCode, plainTitle } from "../visuals/words.js";
+
+export { deCode };
 
 const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 const count = (n: number) => NUMBER_WORDS[n] ?? "many";
@@ -10,17 +12,6 @@ const list = (parts: string[], last = "and") => (parts.length <= 1 ? parts.join(
 /** Capitalises the first spoken letter, after any marks. */
 const capital = (text: string) => text.replace(/^((?:<mark name="[^"]*"\/>)*)(\S)/, (_m, marks: string, first: string) => marks + first.toUpperCase());
 
-/**
- * The PR's own words with code spelled out: `clearStorage()` → "clear storage", `gift_note` → "gift note".
- * Nothing is added; it only makes a quote speakable at the cut's altitude.
- */
-export function deCode(text: string): string {
-  return text
-    .replace(/`/g, "")
-    .replace(/\b([A-Za-z_$][\w$]*)\(\)/g, "$1")
-    .replace(/\b[A-Z]\w*\.[_a-z]\w*\b|(?<![\w$])_+[a-z0-9]\w*|\b[a-z]+(?:[A-Z][a-z0-9]*)+\b|\b[a-z0-9]+(?:_[a-z0-9]+)+\b/g, (name) => humanize(name))
-    .replace(/^(\w+)(\([^)]*\))?!?:\s+/, "");
-}
 const end = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`);
 const words = (name: string) => name.replace(/_/g, " ");
 
@@ -45,8 +36,8 @@ class Sources {
 
   /** The sentence a visual quoted (clipped or whole). */
   quoted(text: string): string[] {
-    const plain = text.replace(/…$/, "");
-    const found = this.request.sentences.find((s) => s.text.replace(/`/g, "").replace(/\s+/g, " ").startsWith(plain));
+    const plain = deCode(text.replace(/…$/, ""));
+    const found = this.request.sentences.find((s) => deCode(s.text).replace(/\s+/g, " ").startsWith(plain));
     return found ? [found.id] : [];
   }
 }
@@ -152,7 +143,7 @@ function narrate(visual: Visual, request: WriteRequest, src: Sources): WrittenSe
     case "riskCards":
       return visual.data.cards.flatMap((c) => {
         const [group, key] = RISK_SOURCE[c.id] ?? ["rollout"];
-        return [say(`${mark(c.id)}${c.risk}`, src.facts(group, key)), ...(c.mitigation ? [say(deCode(c.mitigation), src.quoted(c.mitigation))] : [])];
+        return [say(`${mark(c.id)}${capital(deCode(c.risk))}`, [...src.facts(group, key), ...src.quoted(c.risk)]), ...(c.mitigation ? [say(deCode(c.mitigation), src.quoted(c.mitigation))] : [])];
       });
     case "userJourney":
       return visual.data.steps.map((s) => say(`${mark(s.id)}${capital(/^opens\b/.test(s.label) ? `someone ${s.label}` : deCode(s.label))}`, src.of(s.id)));

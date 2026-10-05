@@ -32,3 +32,15 @@ export function clip(text: string, max = 80): string {
   if (clause) return clause;
   return `${plain.slice(0, max - 1).replace(/\s+\S*$/, "")}…`;
 }
+
+/**
+ * The PR's own words with code spelled out: `clearStorage()` → "clear storage", `gift_note` → "gift note".
+ * Nothing is added; it only makes a quote speakable at the cut's altitude.
+ */
+export function deCode(text: string): string {
+  return text
+    .replace(/`/g, "")
+    .replace(/\b([A-Za-z_$][\w$]*)\(\)/g, "$1")
+    .replace(/\b[A-Z]\w*\.[_a-z]\w*\b|(?<![\w$])_+[a-z0-9]\w*|\b[a-z]+(?:[A-Z][a-z0-9]*)+\b|\b[a-z0-9]+(?:_[a-z0-9]+)+\b/g, (name) => humanize(name))
+    .replace(/^(\w+)(\([^)]*\))?!?:\s+/, "");
+}
