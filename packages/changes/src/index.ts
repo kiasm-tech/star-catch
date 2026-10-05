@@ -34,6 +34,7 @@ export {
 } from "./classify/schema.js";
 export { ruleLabels, structuralLabels } from "./classify/rules.js";
 export { linksOf, untested } from "./links.js";
+export { layoutOf, type Layout } from "./layout.js";
 export { entryPointsOf } from "./entry-points.js";
 export { applyClasses, applyLabels, classifyItems } from "./classify/labels.js";
 export { mockClassifier } from "./classify/mock.js";
