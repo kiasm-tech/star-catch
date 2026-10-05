@@ -92,7 +92,7 @@ export function linksOf(units: Unit[], files: AnalyzeInput["files"]): Link[] {
     for (const to of targets) {
       // Nothing calls or covers a test case, even one named like the code it tests.
       if (isTest(to)) continue;
-      const named = references.has(simpleName(to.name));
+      const named = references.has(simpleName(to.name)) || (to.exportedAs ?? []).some((name) => references.has(name));
       if (named || (imported.length > 0 && imports(imported, to.file))) add(from, to, isTest(from) ? "covers" : "calls");
     }
   }

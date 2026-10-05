@@ -7,8 +7,9 @@ import { defaultComponentOf } from "./component.js";
 import { fallbackUnit, type FallbackFile } from "./fallback.js";
 import { languageOf, type Engine } from "./languages/registry.js";
 import { entryPointsOf } from "./entry-points.js";
+import { exportNames } from "./exports.js";
 import { linksOf } from "./links.js";
-import { ANALYZER_VERSION, AnalyzeInputSchema, type AnalyzeInput, type AnalyzeOptions, type ChangeSet } from "./schema.js";
+import { ANALYZER_VERSION, AnalyzeInputSchema, type AnalyzeInput, type AnalyzeOptions, type ChangeSet, type Unit } from "./schema.js";
 import { compareStructured, readsStructured } from "./structured/compare.js";
 import { triage } from "./triage.js";
 
@@ -75,7 +76,7 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
     if (outcome.degraded) Object.assign(entry, { degraded: true, error: outcome.degraded });
   }
 
-  const { units, refactorings } = explainRefactorings(candidates);
+  const { units, refactorings } = withExportNames(explainRefactorings(candidates), files.slice(0, MAX_FILES));
   const elapsed = budget.elapsedMs();
   return {
     analyzerVersion: ANALYZER_VERSION,
@@ -91,3 +92,19 @@ export async function analyze(input: AnalyzeInput, options: AnalyzeOptions = {})
     timings: { totalMs: elapsed, analysisMs: elapsed, classifyMs: 0 },
   };
 }
+
+const ECMASCRIPT = /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/;
+
+/** Top-level declarations a file exports under another name, or through an export list. */
+function withExportNames<T extends { units: Unit[] }>(result: T, files: AnalyzeInput["files"]): T {
+  const byFile = new Map(
+    files.filter((f) => ECMASCRIPT.test(f.path)).map((f) => [f.path, exportNames(f.head ?? f.base ?? "")] as const),
+  );
+  for (const unit of result.units) {
+    if (unit.unitKind !== "declaration" || /\.| > /.test(unit.name)) continue;
+    const names = byFile.get(unit.file)?.get(unit.name);
+    if (names?.length) unit.exportedAs = names;
+  }
+  return result;
+}
+

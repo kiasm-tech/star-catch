@@ -6,6 +6,7 @@ import type { ClassifyItem, ClassifyResult, UnitItem } from "./schema.js";
 
 /** Whether other code can reach the unit: exported in TS/JS, public in Java, not `_private` in Python. */
 function exported(unit: Unit): boolean {
+  if (unit.exportedAs?.length) return true;
   const code = unit.after ?? unit.before ?? "";
   if (unit.language === "python") return !unit.name.split(".").at(-1)!.startsWith("_");
   if (unit.language === "java") return /\bpublic\b/.test(code.split("{")[0]);
