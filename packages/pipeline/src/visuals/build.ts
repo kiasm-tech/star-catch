@@ -75,6 +75,16 @@ class Source {
     return this.context.sentences.filter((s) => s.class === cls);
   }
 
+  /** Sentences people wrote as prose: the description and issues, not commit subjects. */
+  prose(cls: string): Context["sentences"] {
+    return this.sentences(cls).filter((s) => !s.origin.startsWith("commit:"));
+  }
+
+  /** What the change does, in the PR's words: the rationale, else a behaviour sentence. */
+  statement(): Context["sentences"][number] | undefined {
+    return [...this.prose("rationale"), ...this.prose("behaviour")][0];
+  }
+
   /** The changed entry points, most important concern first. */
   entries(): { entry: EntryPoint; unit: ChangeUnit }[] {
     const found = this.context.entryPoints.flatMap((entry) => {
@@ -137,7 +147,7 @@ const recap: Builder = (_s, { plan }) => ({
 });
 
 const beforeAfter: Builder = (s, { pr }, flags) => {
-  const after = s.sentences("rationale").length > 0 ? s.sentences("rationale") : s.sentences("behaviour");
+  const after = s.sentences("rationale").length > 0 ? s.sentences("rationale") : s.prose("behaviour");
   const items = (list: Context["sentences"], side: string) =>
     top(list, `${side} sentences`, flags, 3).map((x) => ({ id: `${side}:${x.id}`, text: clip(x.text, 160) }));
   const now = items(after, "after");
@@ -244,8 +254,9 @@ const dataModelDiff: Builder = (s, _input, flags) => {
 const outsideView = (cut: Cut): Builder => (s, { pr }, flags) => {
   const [first] = s.entries();
   const system = { id: "system", label: repoName(pr.fullName), x: 0, role: "system" as const };
+  const statement = s.statement();
+  const said = statement ? [{ id: `outcome:${statement.id}`, label: clip(statement.text), kind: "ok" as const }] : [];
   if (!first) {
-    const behaviour = [...s.sentences("rationale"), ...s.sentences("behaviour")][0];
     const [ax, sx] = lanes(2);
     return {
       type: "systemSequenceDiagram",
@@ -255,7 +266,7 @@ const outsideView = (cut: Cut): Builder => (s, { pr }, flags) => {
           { ...system, x: sx! },
         ],
         messages: [{ id: "message:use", from: "actor", to: "system", label: clip(plainTitle(pr.title)) }],
-        outcomes: behaviour ? [{ id: `outcome:${behaviour.id}`, label: clip(behaviour.text), kind: "ok" }] : [],
+        outcomes: said,
       },
     };
   }
@@ -264,12 +275,12 @@ const outsideView = (cut: Cut): Builder => (s, { pr }, flags) => {
   const message =
     cut === "business"
       ? entry.type === "page"
-        ? `opens ${entry.route?.path ?? humanize(unit.name)}`
-        : `uses ${humanize(unit.name)}`
+        ? `opens the ${humanize(unit.name)}`
+        : plainTitle(pr.title)
       : entry.type === "page"
-        ? `GET ${entry.route?.path ?? humanize(unit.name)}`
+        ? `opens ${entry.route?.path ?? `the ${humanize(unit.name)}`}`
         : routeLabel(entry, unit);
-  const outcomes = cut === "business" ? [] : top(outcomesOf(unit.after ?? ""), "outcomes", flags, MAX_PRIMARY - 1);
+  const outcomes = cut === "business" ? said : top(outcomesOf(unit.after ?? ""), "outcomes", flags, MAX_PRIMARY - 1);
   return {
     type: "systemSequenceDiagram",
     data: {
@@ -278,10 +289,7 @@ const outsideView = (cut: Cut): Builder => (s, { pr }, flags) => {
         { ...system, x: sx! },
       ],
       messages: [{ id: `message:${unit.id}`, from: "actor", to: "system", label: clip(message) }],
-      outcomes:
-        outcomes.length > 0
-          ? outcomes.map((o, i) => ({ id: `outcome:${i}`, ...o }))
-          : [{ id: "outcome:answer", label: cut === "business" ? "it works the new way" : "answers", kind: "ok" as const }],
+      outcomes: cut === "business" ? said : outcomes.map((o, i) => ({ id: `outcome:${i}`, ...o })),
     },
   };
 };
@@ -310,8 +318,14 @@ const sequenceDiagram: Builder = (s, _input, flags) => {
   };
 };
 
+/** The rule others depend on, when callers share one: #921's limiter, not one of its callers. */
+function sharedRule(s: Source, group: "rules" | "contracts", key?: string): ChangeUnit | undefined {
+  const callers = (u: ChangeUnit) => s.context.links.filter((l) => l.type === "calls" && l.to === u.id).length;
+  return [...s.unitsOf(group, key)].sort((a, b) => callers(b) - callers(a))[0];
+}
+
 const decision = (cut: Cut): Builder => (s) => {
-  const [unit] = s.unitsOf("rules", "conditionChanged");
+  const unit = sharedRule(s, "rules", "conditionChanged");
   const condition = unit ? changedCondition(unit.before, unit.after) : null;
   const subject = { id: `rule:${unit?.id ?? "rule"}`, label: unit ? humanize(unit.name) : "the rule" };
   if (cut === "business") {
@@ -322,7 +336,7 @@ const decision = (cut: Cut): Builder => (s) => {
     const candidates = s.context.sentences.filter((x) => x.class !== "noise" && x.class !== "problem");
     // Best: the sentence that states the old and the new value; then one with the new value.
     const stated = candidates.find((x) => mentions(x, now) && mentions(x, was)) ?? candidates.find((x) => mentions(x, now));
-    const fallback = [...s.sentences("rationale"), ...s.sentences("behaviour")][0];
+    const fallback = s.statement();
     return {
       type: "decisionDiagram",
       data: { subject, before: null, after: { id: "condition:after", condition: clip((stated ?? fallback)?.text ?? plainTitle(subject.label), 160) } },
@@ -385,7 +399,7 @@ const technicalRisks: Builder = (s, _input, flags) => {
 };
 
 const businessRisks: Builder = (s, _input, flags) => {
-  const subject = (group: "rules" | "contracts") => humanize(s.unitsOf(group)[0]?.name ?? "it");
+  const subject = (group: "rules" | "contracts") => humanize(sharedRule(s, group)?.name ?? "it");
   const cards = [
     ...(s.facts.has("contracts", "breaking") ? [{ id: "risk:breaking", kind: "breaking" as const, risk: "Existing integrations may need to change", mitigation: null }] : []),
     ...(s.facts.has("rollout", "gated") ? [{ id: "risk:flag", kind: "flag" as const, risk: "It arrives switched off and is turned on later", mitigation: null }] : []),
@@ -396,7 +410,7 @@ const businessRisks: Builder = (s, _input, flags) => {
 };
 
 const userJourney: Builder = (s, _input, flags) => {
-  const screens = s.entries().filter((e) => e.entry.type === "page").map((e) => ({ id: `step:${e.unit.id}`, label: `opens ${e.entry.route?.path ?? humanize(e.unit.name)}`, changed: false }));
+  const screens = s.entries().filter((e) => e.entry.type === "page").map((e) => ({ id: `step:${e.unit.id}`, label: `opens the ${humanize(e.unit.name)}`, changed: false }));
   const problem = s.sentences("problem")[0];
   const steps = [...screens, ...(problem ? [{ id: `step:${problem.id}`, label: clip(problem.text), changed: true }] : [])];
   return { type: "userJourney", data: { steps: top(steps, "steps", flags) } };
@@ -405,7 +419,7 @@ const userJourney: Builder = (s, _input, flags) => {
 const featureMap: Builder = (s, _input, flags) => {
   const areas = s.entries().map(({ entry, unit }) => ({
     id: `area:${unit.id}`,
-    label: entry.type === "page" ? `${humanize(unit.name)}` : entry.route?.path ? `${entry.route.path.split("/").filter(Boolean).at(-1) ?? "home"} ${entry.type === "apiRoute" ? "API" : ""}`.trim() : humanize(unit.name),
+    label: entry.type === "page" ? humanize(unit.name) : (entry.route?.path?.split("/").filter(Boolean).at(-1) ?? humanize(unit.name)),
     touched: true,
   }));
   return { type: "featureMap", data: { areas: top(areas, "areas", flags) } };
