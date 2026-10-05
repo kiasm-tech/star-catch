@@ -6,8 +6,9 @@ import type { CutRequest, CutWriting, ScriptWriter, SectionBrief, WriteRequest }
 const RULES = `Rules:
 - Each section answers only its own "purpose". Never repeat what another section says; the reader hears them in order.
 - Plain spoken sentences: no lists, no markdown, no headings. One idea per sentence.
-- Stay under each section's word limit.
-- Every sentence lists its sources: ids from the facts' "sources", sentence ids, or "pr:title". A sentence you can't source, don't write.
+- Write between each section's "minWords" and "wordLimit": make its point, then say what it means — for the code and the people who work on it in the technical cut, for people and the product in the business cut.
+- Every sentence lists its sources: ids from the facts' "sources", sentence ids, ids listed in "changes", or "pr:title". A sentence you can't source, don't write.
+- "changes" says what moved in the code, in words, most important first: use it to say concretely what changed and how parts depend on each other. The business cut uses it only to understand, never to name anything from it.
 - Numbers: only ones that appear in "evidence" facts or in the picture's element labels. Never compute or round a number.
 - Before the words that talk about an element of the picture, put <mark name="ELEMENT_ID"/> with one of that section's element ids, so the picture reveals it as it's spoken. Mark every element once.
 - Technical cut: explain components, interactions and data. Never name functions, files, lines or code identifiers, never write code, even if the PR's text does.
@@ -74,6 +75,7 @@ const section = (brief: SectionBrief) => ({
   heading: brief.heading,
   purpose: brief.purpose,
   wordLimit: brief.wordLimit,
+  minWords: brief.minWords,
   picture: { type: brief.visual.type, elements: brief.elements, words: brief.labels.map((l) => ({ id: l.id, text: l.text })) },
   facts: brief.facts.map((f) => ({ group: f.group, key: f.key, value: f.value, sources: f.sources })),
 });
@@ -83,6 +85,7 @@ const common = (request: WriteRequest | CutRequest) => ({
   prTitle: request.pr.title,
   ...(request.instruction && { instruction: request.instruction }),
   sentences: request.sentences.map((s) => ({ id: s.id, class: s.class, text: s.text })),
+  changes: request.changes,
 });
 
 /** Its id names the model and the prompt version; an unusable answer throws, so the section is flagged. */

@@ -13,6 +13,21 @@ export interface SectionBrief {
   labels: { id: string; text: string; max: number }[];
   facts: Fact[];
   wordLimit: number;
+  /** Enough to make the point and say what it means; 0 where one line is the point (title, wrap). */
+  minWords: number;
+}
+
+/** What moved in the code, in words: what the writer needs to describe a change, never to quote. */
+export interface UnitChange {
+  /** The unit id: a source the writer may cite. */
+  id: string;
+  name: string;
+  file: string;
+  component: string;
+  change: string;
+  /** Other units that call it, and the ones it calls, by name. */
+  callers: number;
+  calls: string[];
 }
 
 /** Everything one section's narration may be written from: never the diff. */
@@ -20,6 +35,8 @@ export interface WriteRequest extends SectionBrief {
   cut: Cut;
   /** The PR's sentences that aren't noise, code names already spelled as words. */
   sentences: Sentence[];
+  /** The changed units, most important first. */
+  changes: UnitChange[];
   pr: { title: string };
   /** A developer's request, from `@star-catch fix …` or the Fix panel. */
   instruction?: string;
@@ -32,6 +49,7 @@ export interface CutRequest {
   cut: Cut;
   sections: SectionBrief[];
   sentences: Sentence[];
+  changes: UnitChange[];
   pr: { title: string };
   instruction?: string;
 }

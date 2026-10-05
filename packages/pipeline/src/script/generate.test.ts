@@ -259,3 +259,57 @@ describe("the picture's words", () => {
     expect(labelProblem({ ...base, text: "Orders of 7 or more" })).toBe("it has a number that isn't evidence (7)");
   });
 });
+
+describe("fuller sections", () => {
+  const cutWriter = (say: (id: string) => string): ScriptWriter => ({
+    id: "fake",
+    writeCut: async ({ sections }) => ({ sections: Object.fromEntries(sections.map((x) => [x.id, [{ text: say(x.id), sources: ["pr:title"] }]])) }),
+    write: async (request) => [{ text: say(request.id), sources: ["pr:title"] }],
+  });
+  const long = "Every key of a team now shares one limit, so a team with several keys no longer gets more room than it pays for.";
+
+  it("tells the writer what moved in the code, in words, and how much each section should say", async () => {
+    const requests: LlmRequest[] = [];
+    const llm: Llm = {
+      completeJson: async (request) => {
+        requests.push(request);
+        return { sections: [] };
+      },
+    };
+    await scriptsOf(snapshotOf("05-condition-change"), modelWriter(llm, "gpt-6-luna")).catch(() => undefined);
+    const sent = JSON.parse(requests[0]!.user) as { changes: { id: string; name: string; change: string }[]; sections: { id: string; minWords: number; wordLimit: number }[] };
+    expect(sent.changes[0]).toMatchObject({ name: "bulk discount", change: "a condition in it changed" });
+    expect(JSON.stringify(sent.changes.map((c) => c.name))).not.toMatch(/bulkDiscount/);
+    const byId = new Map(sent.sections.map((x) => [x.id, x]));
+    expect(byId.get("title")!.minWords).toBe(0);
+    expect(byId.get("rule")!.minWords).toBeGreaterThanOrEqual(15);
+    expect(byId.get("rule")!.minWords).toBeLessThanOrEqual(byId.get("rule")!.wordLimit);
+  });
+
+  it("folds a thin section into the article when its chapter has a fuller one", async () => {
+    const say = (id: string) => (id === "changeMap" ? "The pricing changed." : long);
+    const snapshot = snapshotOf("15-rate-limit-per-org");
+    const folded = await buildScripts(snapshot, { classifier: mockClassifier, writer: cutWriter(say) }, { foldThin: true });
+    const kept = await buildScripts(snapshot, { classifier: mockClassifier, writer: cutWriter(say) });
+    const chapter = (scripts: typeof folded) => scripts.technical!.chapters.find((c) => c.sections.some((s) => s.id === "changeMap"))!;
+    expect(chapter(folded).sections.length).toBeGreaterThan(1);
+    expect(chapter(folded).sections.find((s) => s.id === "changeMap")!.article.readMore).toBe(true);
+    expect(folded.technical!.flags).toContainEqual({ sectionId: "changeMap", message: "folded into the article: 3 words is too thin for its own scene" });
+    expect(chapter(kept).sections.find((s) => s.id === "changeMap")!.article.readMore).toBe(false);
+  });
+
+  it("never folds the title or the wrap, or a section alone in its chapter", async () => {
+    const folded = await buildScripts(snapshotOf("05-condition-change"), { classifier: mockClassifier, writer: cutWriter(() => "It changed.") }, { foldThin: true });
+    for (const c of folded.technical!.chapters) {
+      if (c.sections.length === 1) expect(c.sections[0]!.article.readMore).toBe(false);
+    }
+    expect(sectionsOf(folded.technical!).find((s) => s.id === "title")!.article.readMore).toBe(false);
+    expect(sectionsOf(folded.technical!).find((s) => s.id === "wrap")!.article.readMore).toBe(false);
+  });
+
+  it("flags a section well under its floor", () => {
+    const visual = { type: "recap", data: { chapters: [] } } as unknown as Visual;
+    const flags = checkSection({ cut: "technical", draft: false, sentences: [{ text: "Short.", sources: ["pr:title"] }], visual, known: new Set(["pr:title"]), evidence: new Set(), components: [], codeNames: [], minWords: 20 }).flags;
+    expect(flags).toContain("shorter than its 20-word floor (1 words)");
+  });
+});
