@@ -40,7 +40,11 @@ export function clip(text: string, max = 80): string {
 export function deCode(text: string): string {
   return text
     .replace(/`/g, "")
-    .replace(/\b([A-Za-z_$][\w$]*)\(\)/g, "$1")
+    // A call is code whatever its case: `ClearStorage()` → "Clear storage".
+    .replace(/\b([A-Za-z_$][\w$]*)\(\)/g, (_m, name: string) => {
+      const words = humanize(name);
+      return /^[A-Z]/.test(name) ? words.charAt(0).toUpperCase() + words.slice(1) : words;
+    })
     .replace(/\b[A-Z]\w*\.[_a-z]\w*\b|(?<![\w$])_+[a-z0-9]\w*|\b[a-z]+(?:[A-Z][a-z0-9]*)+\b|\b[a-z0-9]+(?:_[a-z0-9]+)+\b/g, (name) => humanize(name))
     .replace(/^(\w+)(\([^)]*\))?!?:\s+/, "");
 }
