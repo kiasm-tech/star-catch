@@ -129,11 +129,12 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
   const sections = new Map<string, ScriptSection>();
   for (const p of planned) {
     let checked = check(p, first.get(p.brief.id) ?? []);
-    // One more try for a section the checks emptied or cut, told exactly why.
-    if (dropped(checked).length > 0) {
+    // One more try for a section the checks emptied or cut, told exactly why; or that came back with nothing.
+    const nothing = (first.get(p.brief.id) ?? []).length === 0;
+    if (dropped(checked).length > 0 || nothing) {
       try {
-        const retry = check(p, await options.writer.write({ ...shared, ...p.brief, repair: dropped(checked) }, options.signal));
-        if (dropped(retry).length < dropped(checked).length) checked = retry;
+        const retry = check(p, await options.writer.write({ ...shared, ...p.brief, repair: nothing ? ["nothing was written for this section"] : dropped(checked) }, options.signal));
+        if (nothing ? retry.sentences.length > 0 : dropped(retry).length < dropped(checked).length) checked = retry;
       } catch (error) {
         fail(p.brief.id, error);
       }

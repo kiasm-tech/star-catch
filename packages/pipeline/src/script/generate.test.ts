@@ -9,7 +9,7 @@ import { buildScripts } from "../usecases/build-scripts.js";
 import { elementIds } from "../visuals/elements.js";
 import { checkSection, labelProblem } from "./checks.js";
 import { generateScripts } from "./generate.js";
-import { modelWriter, WRITER_CUT_PROMPT } from "./model-writer.js";
+import { modelWriter, WRITER_CUT_PROMPT, WRITER_PROMPT } from "./model-writer.js";
 import { deCode, templateWriter } from "./template-writer.js";
 
 const fixtures = loadSyntheticFixtures();
@@ -143,7 +143,8 @@ describe("writers", () => {
     const scripts = await scriptsOf(snapshotOf("05-condition-change"), failing);
     expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "the writer failed: timeout" });
     expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
-    expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length);
+    // Every section once, and the failed one a second time.
+    expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length + 1);
   });
 
   it("asks the model once per cut, each section with its purpose and only its facts, in de-coded words", async () => {
@@ -165,7 +166,8 @@ describe("writers", () => {
     const snapshot = snapshotOf("05-condition-change");
     const context = await buildContext(snapshot, { classifier: mockClassifier });
     const scripts = await generateScripts(context, { fullName: snapshot.fullName, number: snapshot.number, title: snapshot.title }, { writer, open: false });
-    expect(requests.map((r) => r.system)).toEqual([WRITER_CUT_PROMPT, WRITER_CUT_PROMPT]);
+    // One call per cut, and one more for the section whose answer was unusable.
+    expect(requests.map((r) => r.system)).toEqual([WRITER_CUT_PROMPT, WRITER_PROMPT, WRITER_CUT_PROMPT]);
     const technical = JSON.parse(requests[0]!.user) as { cut: string; sections: { id: string; purpose: string; facts: { group: string }[] }[] };
     expect(technical.cut).toBe("technical");
     expect(technical.sections.map((x) => x.id)).toEqual(sectionsOf(scripts.technical!).map((x) => x.id));
@@ -177,6 +179,21 @@ describe("writers", () => {
     expect(JSON.stringify([read.sentences, read.sections.map((x) => x.facts.map((f) => f.value))])).not.toMatch(/bulkDiscount/);
     expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
     expect(sectionsOf(scripts.technical!).find((x) => x.id === "title")!.narration).toBe("Apply the bulk discount from 5 units.");
+  });
+
+  it("gives a section the cut call left empty one more try on its own", async () => {
+    const asked: string[][] = [];
+    const writer: ScriptWriter = {
+      id: "fake",
+      writeCut: async ({ sections }) => ({ sections: Object.fromEntries(sections.map((x) => [x.id, x.id === "rule" ? [] : [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]])) }),
+      write: async (request) => {
+        asked.push(request.repair ?? []);
+        return [{ text: "The threshold for the bulk discount moved.", sources: ["pr:title"] }];
+      },
+    };
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), writer);
+    expect(asked).toEqual([["nothing was written for this section"]]);
+    expect(sectionsOf(scripts.technical!).find((x) => x.id === "rule")!.narration).toBe("The threshold for the bulk discount moved.");
   });
 
   it("gives a section the checks emptied one more try, saying why", async () => {
