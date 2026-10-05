@@ -20,8 +20,8 @@ const INTENT_BY_TYPE: Record<string, Intent> = {
 };
 
 const SENTENCE_RULES: [RegExp, SentenceClass][] = [
-  [/\b(never|bug|broken|breaks?|fails?|failing|errors?|crash(es)?|wrong|can'?t|cannot|doesn'?t|didn'?t|tickets?|races?|stale|regression|asked|needs?|guessing|confus\w*|unclear)\b/i, "problem"],
-  [/\b(so (that|the|both|it|we|they)|because|in order to|otherwise|which means)\b/i, "rationale"],
+  [/\b(never|bug|broken|breaks?|fails?|failing|errors?|crash(es)?|wrong|can'?t|cannot|doesn'?t|didn'?t|did not|does not|tickets?|races?|stale|regression|asked|needs?|guessing|confus\w*|unclear|mixed|(was|were) (doing|using|computing|summing|counting))\b/i, "problem"],
+  [/\b(so (that|the|both|it|we|they)|because|in order to|otherwise|which means|(for|ahead of) (the|a|an|our) [\w -]*?(campaign|launch|release))\b/i, "rationale"],
   [/^(run|set|make sure|migrate|deploy|update|please|remember)\b/i, "instruction"],
   [/\b(now|will|adds?|removes?|lowers?|raises?|returns?|changes?|supports?|uses?)\b/i, "behaviour"],
 ];
@@ -29,7 +29,7 @@ const SENTENCE_RULES: [RegExp, SentenceClass][] = [
 function kindOf(item: UnitItem): Kind {
   if (item.language === "tsx") return "ui";
   if (/(^|\/)(models?|entities|schema|db)\//.test(item.path)) return "data";
-  if (/(^|\/)(api|types|contracts|interfaces)\//.test(item.path) || /\.d\.ts$/.test(item.path)) return "interface";
+  if (/(^|\/)(types|contracts|interfaces)\//.test(item.path) || /\.d\.ts$/.test(item.path)) return "interface";
   return "logic";
 }
 

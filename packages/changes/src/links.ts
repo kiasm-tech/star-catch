@@ -90,16 +90,17 @@ export function linksOf(units: Unit[], files: AnalyzeInput["files"]): Link[] {
     // A test file's own import lines (its residue unit) aren't a test.
     const imported = isTest(from) && from.unitKind === "declaration" ? importsByFile.get(from.file) ?? [] : [];
     for (const to of targets) {
-      if (isTest(to) && isTest(from)) continue;
-      const named = references.has(simpleName(to.name));
+      // Nothing calls or covers a test case, even one named like the code it tests.
+      if (isTest(to)) continue;
+      const named = references.has(simpleName(to.name)) || (to.exportedAs ?? []).some((name) => references.has(name));
       if (named || (imported.length > 0 && imports(imported, to.file))) add(from, to, isTest(from) ? "covers" : "calls");
     }
   }
   return links;
 }
 
-/** Behavioural logic or UI that no test in the PR covers (changes.md §6.1). */
+/** Behavioural logic or UI that no test in the PR covers (changes.md §6.1); removed code can't be. */
 export function untested(unit: Unit, kind: Kind, links: Link[]): boolean {
-  if (unit.verdict !== "behavioural" || (kind !== "logic" && kind !== "ui")) return false;
+  if (unit.verdict !== "behavioural" || unit.changeType === "removed" || (kind !== "logic" && kind !== "ui")) return false;
   return !links.some((l) => l.type === "covers" && l.to === unit.id);
 }

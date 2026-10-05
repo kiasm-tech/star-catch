@@ -1,0 +1,74 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateScripts with the template writer > narrates 05 and 08 the same way every time 1`] = `
+{
+  "business": [
+    "headline: Apply the bulk discount from 5 units.",
+    "before: [step:description:0]Customers ordering 5 to 9 units never got the bulk discount.",
+    "whatsNew: [message:use]Apply the bulk discount from 5 units. [outcome:description:1]This lowers the threshold from 10 to 5 units so the discount also applies to…",
+    "theRuleNow: [condition:after]This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
+    "inNumbers: [metric:description:0:5]Customers ordering 5 to 9 units never got the bulk discount, and support keeps getting tickets about it.",
+    "whatToKnow: [risk:rules]This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
+    "wrap: In short: apply the bulk discount from 5 units.",
+  ],
+  "name": "05-condition-change",
+  "technical": [
+    "title: Apply the bulk discount from 5 units.",
+    "problem: [before:description:0]Customers ordering 5 to 9 units never got the bulk discount, and support keeps getting tickets about it. [after:description:1]This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
+    "changeMap: This change touches [component:pricing]pricing.",
+    "rule: The rule for bulk discount changed from [condition:before]10 to [condition:after]5.",
+    "risksRollout: [risk:untested]No test in this change covers: bulk discount.",
+    "wrap: In short: apply the bulk discount from 5 units.",
+    "reviewFocus: Review first: [component:pricing]pricing.",
+  ],
+}
+`;
+
+exports[`generateScripts with the template writer > narrates 05 and 08 the same way every time 2`] = `
+{
+  "business": [
+    "headline: Say when the plan renews.",
+    "before: [step:app/billing/page.tsx#BillingPage]Someone opens the billing page. [step:description:0]The billing page said the plan renews automatically each month.",
+    "whatsNew: [message:app/billing/page.tsx#BillingPage]You open the billing page. [outcome:description:1]It now says the plan renews on the first day of each month.",
+    "whoItAffects: It affects [area:app/billing/page.tsx#BillingPage]billing page.",
+    "wrap: In short: say when the plan renews.",
+  ],
+  "name": "08-ui-with-test",
+  "technical": [
+    "title: Say when the plan renews.",
+    "problem: [before:description:0]The billing page said the plan renews automatically each month, which left people guessing about the date. [after:description:1]It now says the plan renews on the first day of each month, and the page test checks the new text.",
+    "changeMap: This change touches [component:billing]billing.",
+    "fromOutside: [message:app/billing/page.tsx#BillingPage]A user opens /billing.",
+    "verification: One test checks it: [test:app/billing/page.test.tsx#BillingPage > explains when the plan renews]explains when the plan renews.",
+    "wrap: In short: say when the plan renews.",
+    "reviewFocus: Review first: [component:billing]billing.",
+  ],
+}
+`;
+
+exports[`generateScripts with the template writer > narrates PR #921 the same way every time 1`] = `
+{
+  "business": [
+    "headline: Rate limits count per organisation, not per key.",
+    "before: [step:description:0]Limits were counted per API key.",
+    "whatsNew: [message:app/api/orders/route.ts#POST]Rate limits count per organisation, not per key. [outcome:description:1]This counts usage per organisation so that every key of a team shares one limit.",
+    "theRuleNow: [condition:after]This counts usage per organisation so that every key of a team shares one limit, and REST, GraphQL and batch ingest now ask the same limiter.",
+    "whoItAffects: It affects [area:app/api/orders/route.ts#POST]orders.",
+    "whatToKnow: [risk:rules]This counts usage per organisation so that every key of a team shares one limit, and REST, GraphQL and batch ingest now ask the same limiter.",
+    "wrap: In short: rate limits count per organisation, not per key.",
+  ],
+  "technical": [
+    "title: Rate limits count per organisation, not per key.",
+    "problem: [before:description:0]Limits were counted per API key, which is wrong: an organisation with two keys got twice the quota. [after:description:1]This counts usage per organisation so that every key of a team shares one limit, and REST, GraphQL and batch ingest now ask the same limiter.",
+    "changeMap: This change touches [component:api]api, [component:graphql]graphql, [component:jobs]jobs, [component:limits]limits, [component:store]store and [component:db]db.",
+    "structureChange: It adds [unit:limits/limiter.ts#limitFor]limit for and [unit:db/migrations/20261001120000_carry_usage_to_orgs.sql#usage_counters]usage counters. [unit:limits/limiter.ts#allowRequest]Allow request works with it.",
+    "fromOutside: [message:app/api/orders/route.ts#POST]An API client sends POST /api/orders. It answers [outcome:0]429 Too many requests or [outcome:1]200 OK.",
+    "interaction: [message:app/api/orders/route.ts#POST->limits/limiter.ts#allowRequest]Api calls allow request in limits. [message:limits/limiter.ts#allowRequest->limits/limiter.ts#limitFor]Limits calls limit for in limits. [message:limits/limiter.ts#allowRequest->store/usage.ts#usageOf]Limits calls usage of in store.",
+    "rule: [condition:before][condition:after]The condition that decides allow request changed.",
+    "reach: Three parts depend on limits: [component:api]api, [component:graphql]graphql and [component:jobs]jobs.",
+    "verification: One test checks it: [test:limits/limiter.test.ts#allowRequest > counts two keys of one organisation against one limit]counts two keys of one organisation against one limit.",
+    "risksRollout: [risk:migration]A data migration runs when this ships. [risk:untested]No test in this change covers: POST, create order, ingest batch, usage of.",
+    "wrap: In short: rate limits count per organisation, not per key.",
+  ],
+}
+`;

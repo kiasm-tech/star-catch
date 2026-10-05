@@ -71,7 +71,7 @@
       "group": "shape",
       "key": "components",
       "value": [
-        "src"
+        "pricing"
       ],
       "sources": [
         "src/pricing/discount.ts#bulkDiscount"

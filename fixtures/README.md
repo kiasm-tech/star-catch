@@ -24,6 +24,9 @@ change detection and classification. Each folder has:
   hex shas and `installationId: null`. Every file has `baseContent`/`headContent` as its status
   implies and a unified-diff `patch` (hunks only, as GitHub returns it) with matching
   `additions`/`deletions`.
+- `expected-sections.json` — per cut, the sections the update should have (`null` when the gates
+  say no update): `{ gate, sections, readMore, draft }`, section ids in script order, derived from
+  `docs/spec-update-structure.md` §3, §6 and §7 — never by running the code.
 - `expected.json` — a partial context (`ContextExpectationSchema`) stating only what is
   unambiguous. A field left out is not checked; an array that is present is the whole set, so
   `"units": []` means no units. Never state intent or visibility — those are the classifier's.
@@ -52,3 +55,4 @@ the contracts, the patch counts, and that each patch turns the base content into
 | 12-python-extract | Python method extracted → structural, extract |
 | 13-java-extract-move | Java method extracted, another moved to another class → structural, extract and move |
 | 14-non-ascii | A TS function after umlauts and emoji changed → its before/after cut exactly (string indexes, not bytes) |
+| 15-rate-limit-per-org | PR #921 from the update spec: limits per organisation, three callers, a data-only migration, a contention test → the sections of spec §13 |

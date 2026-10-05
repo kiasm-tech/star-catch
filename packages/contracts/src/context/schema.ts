@@ -78,6 +78,8 @@ export const LinkSchema = z.object({
 export const EntryPointSchema = z.object({
   unitId: z.string(),
   type: z.enum(ENTRY_POINTS),
+  /** What reaches it from outside, when the framework says: `POST /api/orders`, a page's path. */
+  route: z.object({ method: z.string().optional(), path: z.string().optional() }).optional(),
 });
 
 export const ConcernSchema = z.object({

@@ -46,13 +46,18 @@ describe("mockClassifier", () => {
 
   it("decides a kind only when the rules didn't, and flags a breaking title and security paths", async () => {
     expect(await classify({ decided: { kind: "test", risks: [] } })).not.toHaveProperty("kind");
-    expect(await classify({ path: "src/api/orders.ts" })).toMatchObject({ kind: "interface" });
+    expect(await classify({ path: "src/types/orders.ts" })).toMatchObject({ kind: "interface" });
+    expect(await classify({ path: "app/api/orders/route.ts" })).toMatchObject({ kind: "logic" });
     expect(await classify({ title: "feat!: drop v1", path: "src/auth/login.ts" })).toMatchObject({ breaking: true, securitySensitive: true });
   });
 
   it.each([
     ["Customers never got the discount.", "problem"],
     ["The invoice email needs the same total.", "problem"],
+    ["The name did not say which tax it adds.", "problem"],
+    ["Cart.total mixed summing with discounts.", "problem"],
+    ["OrderService was doing its own formatting.", "problem"],
+    ["Marketing is lowering the threshold for the autumn campaign.", "rationale"],
     ["This lowers the threshold so the discount applies.", "rationale"],
     ["This moves the sum out so both can share it.", "rationale"],
     ["Run the migration before deploying.", "instruction"],

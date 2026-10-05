@@ -28,6 +28,14 @@ describe("linksOf", () => {
     expect(await links(page, test)).toEqual(["renders covers Page"]);
   });
 
+  it("never links into a test case named like the code it tests", async () => {
+    const code = modified("src/limit.ts", "export function allow() {\n  return 1;\n}\n", "export function allow() {\n  return 2;\n}\n");
+    const caller = modified("src/route.ts", "export function handle() {\n  return 1;\n}\n", "export function handle() {\n  return allow();\n}\n");
+    const test = added("src/limit.test.ts", 'describe("allow", () => {\n  it("allows", () => {\n    allow();\n  });\n});\n');
+    const found = await links(code, caller, test);
+    expect(found.filter((l) => l.startsWith("handle "))).toEqual(["handle calls allow"]);
+  });
+
   it("covers what a test file imports, even unnamed", async () => {
     const lib = modified("src/money/format.ts", "export function cents(n: number) {\n  return n;\n}\n", "export function cents(n: number) {\n  return n * 100;\n}\n");
     const test = added("tests/money.test.ts", 'import * as money from "../src/money/format";\nit("formats", () => {\n  expect(money.toString()).toBe("x");\n});\n');
@@ -73,8 +81,9 @@ describe("untested", () => {
     expect(untested(unit("src#f"), "logic", covered)).toBe(false);
   });
 
-  it("leaves other kinds and structural units alone", () => {
+  it("leaves other kinds, structural units and removed code alone", () => {
     expect(untested(unit("src#g"), "configuration", [])).toBe(false);
     expect(untested(unit("src#g", "structural"), "logic", [])).toBe(false);
+    expect(untested({ ...unit("src#g"), changeType: "removed" } as Unit, "logic", [])).toBe(false);
   });
 });

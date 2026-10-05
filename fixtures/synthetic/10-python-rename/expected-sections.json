@@ -1,0 +1,15 @@
+{
+  "technical": {
+    "gate": "full",
+    "sections": [
+      "title",
+      "problem",
+      "changeMap",
+      "wrap"
+    ],
+    "draft": [
+      "reviewFocus"
+    ]
+  },
+  "business": null
+}

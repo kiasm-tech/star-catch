@@ -33,6 +33,11 @@ Pull request
    scene lasts and when each diagram step appears.
 7. **Video and article carry the same content.** Same chapters, same order. A section cut from the
    video for time moves to the article's *Read more*; it isn't lost.
+8. **For understanding, not for review.** The update tells people in a few minutes what changed, at a
+   high level. It's the same before and after the merge: it changes only when the code does (a new
+   push) or someone asks for a revision. Nothing in it depends on the PR being open or merged, or
+   on CI; the page shows the state, the script doesn't. The one exception sits outside the chapters:
+   the draft-only *Review focus* appendix (§6).
 
 ---
 
@@ -57,7 +62,7 @@ model and must cite what they were inferred from.
 
 | Group | Facts | Kind |
 |---|---|---|
-| Identity | number, title, author, state (open / merged), labels, reviewers | read |
+| Identity | number, title, author, labels (the page also shows the state; the script never uses it) | read |
 | Intent | why it was done, what was wrong before, linked issues | inferred |
 | Shape | components touched (files grouped into named components), components added or removed, size counted in components rather than lines | read + inferred |
 | Interactions | flows between components, entry points touched (pages, endpoints, jobs, commands) | inferred |
@@ -66,7 +71,7 @@ model and must cite what they were inferred from.
 | Rules | a business rule whose outcome changed (what counts, who may do what) | inferred |
 | Users | screens touched, before/after screenshots or preview link, personas affected | read + inferred |
 | Rollout | feature flags, migrations, config changes, phased release | read |
-| Quality | tests added or changed, CI status | read |
+| Quality | tests added or changed | read |
 | Reach | components and features that depend on what changed | read |
 | Evidence | real numbers from the PR, issue or CI: benchmarks, metrics, counts | read, **never inferred** |
 
@@ -106,15 +111,20 @@ A chapter with no qualifying section is skipped. The chapter bar only lists chap
 | Structure change | What changed | When relevant | Components added, removed or re-wired | Architecture morph |
 | Contract change | What changed | When relevant | A public API, event or schema changed | Contract card |
 | Data change | What changed | When relevant | A data entity changed | Data model diff |
+| From the outside | How it works | When relevant | A changed entry point: a page, an API route, a command or a job | System sequence diagram |
 | Interaction | How it works | When relevant | A flow of ≥ 3 steps across ≥ 2 components | Sequence diagram |
 | Lifecycle | How it works | When relevant | A state or status was added, or its transitions changed | State machine |
 | Rule | How it works | When relevant | A rule's outcome changed | Decision diagram |
 | Data flow | How it works | If room | Data moves through ≥ 3 places | Data flow |
 | Reach | Reach | When relevant | ≥ 1 dependent outside the change | Impact rings |
-| Verification | Watch out | When relevant | Tests or CI status known | Checklist |
+| Verification | Watch out | When relevant | Tests added or changed | Checklist |
 | Risks & rollout | Watch out | Always, if any risk fact | Migration, breaking contract, flag, config change, or untested code | Risk cards + rollout timeline |
-| Review focus | Watch out | When relevant | PR is still open | Component map, top 3 ranked |
 | Wrap | Wrap | Always | — | Recap (+ next steps if follow-up issues exist) |
+
+**Draft only — Review focus.** While the PR is open, the technical *article* ends with a *Review
+focus* appendix: the component map with the top three concerns, labelled "Draft only — removed when
+merged". It sits outside the chapters, is never in the video, and is dropped when the update is
+published, so the chapters read the same before and after the merge.
 
 ## 7. Business cut — sections
 
@@ -198,7 +208,7 @@ the narration. In the article, each visual appears as its final frame.
 
 | Visual | Shows | Cut |
 |---|---|---|
-| **Title card** | PR, author, state, cut | T · B |
+| **Title card** | PR, author, cut | T · B |
 | **Chapter bar** | Chapters present, progress through them — visible throughout | T · B |
 | **Glossary card** | One term, defined in a sentence | B |
 | **Recap** | The chapter bar with every chapter ticked | T · B |
@@ -229,7 +239,7 @@ One document per cut. The model writes it from the facts and the selected sectio
 ```jsonc
 {
   "cut": "business",
-  "pr": { "number": 921, "title": "Rate limits count per organisation, not per key", "state": "merged" },
+  "pr": { "number": 921, "title": "Rate limits count per organisation, not per key" },
   "chapters": [
     {
       "id": "how",
@@ -292,9 +302,10 @@ load (stated in the PR). Merged.
 | Watch out | Risks & rollout — usage carried over, no reset · Verification — contention tests, latency metric card | What to know — nothing to do; if a customer asks why usage counts differently, it's this change |
 | Wrap | Recap | Recap |
 
-**Skipped, and why:** Contract change (no public API changed), Lifecycle (no new state), Review focus
-(already merged), In numbers (no business metric in the facts), What you may need to do (no action
-required).
+**Skipped, and why:** Contract change (no public API changed), Lifecycle (no new state), the draft-only
+Review focus appendix (already merged), In numbers
+(the only number is a latency, not a business metric), What you may need to do (no action required).
+The same two cuts are produced while the PR is open and after it merges.
 
 Same seven chapters, same order, different depth — that's what makes the two cuts read as one update.
 
@@ -319,6 +330,6 @@ Same seven chapters, same order, different depth — that's what makes the two c
 | Question | Why it matters |
 |---|---|
 | Are the caps right — business ≤ 2 min, technical ≤ 5 min? | The designs show 1:32 and 3:41; the drafts allowed up to 5 and 7 minutes |
+| Should *Watch out* ask "Did you expect this?" for each new behaviour, with a yes/no answer stored for the author? | Turns the update into a check that the change matches what people expected; planned with reactions and questions, after the scripts |
 | Where do screenshots come from — a preview deploy capture, or images in the PR? | Decides how often the business cut gets a screenshot slider instead of an SSD |
 | May the technical cut use a component's code name ("RateLimiter"), or only a descriptive one ("the rate limiter")? | Sets the altitude check in §12 |
-| Is *Review focus* worth keeping, given drafts are only seen by developers anyway? | It's the only section that exists purely for the draft phase |

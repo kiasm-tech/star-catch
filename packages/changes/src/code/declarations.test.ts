@@ -349,7 +349,7 @@ describe("declarationsOf: the fixtures", () => {
       }
     }
     expect(missing).toEqual([]);
-    expect(checked).toBe(21);
+    expect(checked).toBe(29);
   });
 
   it("splits the large recorded test files into test cases", async () => {

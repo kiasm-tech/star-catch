@@ -11,6 +11,8 @@ export interface SyntheticFixtureFiles {
   name: string;
   snapshot: unknown;
   expected: unknown;
+  /** `expected-sections.json`; undefined when the file is missing. */
+  sections?: unknown;
 }
 
 export interface FixtureReader {

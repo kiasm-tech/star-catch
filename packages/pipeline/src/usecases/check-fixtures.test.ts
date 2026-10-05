@@ -21,6 +21,7 @@ const synthetic = snapshotOf(ref, {
   ],
 });
 const expected = { pr: { fullName: ref.fullName, number: ref.number, headSha: synthetic.headSha } };
+const sections = { technical: { gate: "full", sections: ["title", "wrap"] }, business: null };
 
 function reader(parts: Partial<{ snapshots: unknown[]; webhooks: unknown[]; synthetic: SyntheticFixtureFiles[] }>): FixtureReader {
   return {
@@ -39,7 +40,7 @@ describe("checkFixtures", () => {
     const r = reader({
       snapshots: [recorded],
       webhooks: [openedWebhook(recorded)],
-      synthetic: [{ name: "05-condition", snapshot: synthetic, expected }],
+      synthetic: [{ name: "05-condition", snapshot: synthetic, expected, sections }],
     });
     expect(await problemsOf(r)).toEqual([]);
     expect(await checkFixtures(r)).toHaveLength(3);
@@ -63,7 +64,7 @@ describe("checkFixtures", () => {
   it("reports a synthetic patch that doesn't produce the head content", async () => {
     const broken = structuredClone(synthetic);
     broken.files[0]!.headContent = "if (q >= 6) {\n";
-    expect(await problemsOf(reader({ synthetic: [{ name: "05-condition", snapshot: broken, expected }] }))).toEqual([
+    expect(await problemsOf(reader({ synthetic: [{ name: "05-condition", snapshot: broken, expected, sections }] }))).toEqual([
       ["synthetic/05-condition", ["src/discount.ts: patch doesn't turn the base content into the head content"]],
     ]);
   });
@@ -71,8 +72,17 @@ describe("checkFixtures", () => {
   it("reports an expectation that states intent", async () => {
     const withIntent = { ...expected, units: [{ id: "src/discount.ts#bulkDiscount", labels: { intent: "fix" } }] };
     const [[, problems]] = (await problemsOf(
-      reader({ synthetic: [{ name: "05-condition", snapshot: synthetic, expected: withIntent }] }),
+      reader({ synthetic: [{ name: "05-condition", snapshot: synthetic, expected: withIntent, sections }] }),
     )) as [string, string[]][];
     expect(problems).toEqual(["src/discount.ts#bulkDiscount: expectations never state intent or visibility"]);
+  });
+
+  it("requires expected sections, in the answer key's shape", async () => {
+    const check = async (extra: Partial<SyntheticFixtureFiles>) =>
+      (await problemsOf(reader({ synthetic: [{ name: "05-condition", snapshot: synthetic, expected, ...extra }] }))).flatMap(([, p]) => p);
+    expect(await check({})).toEqual(["no expected-sections.json"]);
+    expect(await check({ sections: { technical: { gate: "full", sections: ["nope"] }, business: null } })).toEqual([
+      expect.stringMatching(/^expected-sections: /),
+    ]);
   });
 });

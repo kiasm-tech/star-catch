@@ -108,6 +108,26 @@ describe("factsOf", () => {
     ]);
   });
 
+  it("counts an API route as a contract change only when its signature changed", () => {
+    const units = [unit("GET"), unit("POST", { changeType: "signatureChanged" })];
+    const entryPoints = [
+      { unitId: id("GET"), type: "apiRoute" as const },
+      { unitId: id("POST"), type: "apiRoute" as const },
+    ];
+    expect(keyed({ units, entryPoints }).find(([k]) => k === "contracts.changed")).toEqual(["contracts.changed", ["POST"], [id("POST")]]);
+  });
+
+  it("counts a migration's data-only statements as a migration, not a data change", () => {
+    const units = [
+      unit("usage", { kind: "data", unitKind: "schemaEntity", changeType: "added", risks: ["dataMigration"], after: "UPDATE usage SET subject = org_id;" }),
+      unit("orders.note", { kind: "data", unitKind: "schemaEntity", changeType: "added", risks: ["dataMigration"], after: "ALTER TABLE orders ADD COLUMN note text;" }),
+    ];
+    expect(keyed({ units }).filter(([k]) => /^(data|rollout)/.test(k as string))).toEqual([
+      ["data.added", ["orders.note"], [id("orders.note")]],
+      ["rollout.migration", true, [id("usage"), id("orders.note")]],
+    ]);
+  });
+
   it("files data changes by change type and flags a migration", () => {
     const units = [
       unit("orders.note", { kind: "data", changeType: "added", risks: ["dataMigration"] }),

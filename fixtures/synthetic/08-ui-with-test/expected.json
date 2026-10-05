@@ -94,7 +94,7 @@
       "group": "shape",
       "key": "components",
       "value": [
-        "app"
+        "billing"
       ],
       "sources": [
         "app/billing/page.tsx#BillingPage",

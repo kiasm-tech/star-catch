@@ -29,7 +29,7 @@ describe("cli fixtures", () => {
   it("passes on the repository's fixtures", async () => {
     expect(await run(["fixtures"], mockEnv(), io)).toBe(0);
     expect(out.at(-1)).toMatch(/^(\d+)\/\1 fixtures ok$/);
-    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(14);
+    expect(out.filter((l) => l.startsWith("ok    synthetic/"))).toHaveLength(15);
   });
 
   it("fails and names the fixture when a patch is wrong", async () => {
@@ -167,7 +167,7 @@ describe("cli context", () => {
 describe("cli eval-classify", () => {
   it("compares the offline classifier with every pinned label", async () => {
     expect(await run(["eval-classify"], mockEnv(), io)).toBe(0);
-    expect(err[0]).toMatch(/^\d+ items to label in 14 fixtures \(\d+ characters\) by mock@1$/);
+    expect(err[0]).toMatch(/^\d+ items to label in 15 fixtures \(\d+ characters\) by mock@1$/);
     expect(out.at(-1)).toMatch(/^(\d+)\/\1 agree$/);
   });
 
@@ -198,3 +198,20 @@ describe("cli eval-classify", () => {
     expect(await run(["eval-classify", "99-nope"], mockEnv(), io)).toBe(2);
   });
 });
+
+describe("cli script", () => {
+  it("prints both scripts of PR #921 with the template writer, sections and flags on stderr", async () => {
+    expect(await run(["script", path.join(dir, "synthetic", "15-rate-limit-per-org")], mockEnv(), io)).toBe(0);
+    const scripts = JSON.parse(out.join("\n"));
+    expect(Object.keys(scripts)).toEqual(["technical", "business"]);
+    expect(err[0]).toMatch(/^technical \(full, \d+ words\): title, problem, changeMap, structureChange, fromOutside, interaction, rule, reach, verification, risksRollout, wrap$/);
+    expect(err.at(-1)).toMatch(/by mock@1 and template@1$/);
+  });
+
+  it("asks for a writer model before writing for real", async () => {
+    const env = { STAR_CATCH_MOCK: "false", STAR_CATCH_MOCK_LLM: "false", STAR_CATCH_FIXTURES_DIR: dir };
+    expect(await run(["script", path.join(dir, "synthetic", "05-condition-change")], env, io)).toBe(2);
+    expect(err.at(-1)).toMatch(/^Set STAR_CATCH_CLASSIFIER_MODEL/);
+  });
+});
+

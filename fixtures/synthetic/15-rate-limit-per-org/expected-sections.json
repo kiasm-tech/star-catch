@@ -1,0 +1,30 @@
+{
+  "technical": {
+    "gate": "full",
+    "sections": [
+      "title",
+      "problem",
+      "changeMap",
+      "structureChange",
+      "fromOutside",
+      "interaction",
+      "rule",
+      "reach",
+      "verification",
+      "risksRollout",
+      "wrap"
+    ]
+  },
+  "business": {
+    "gate": "full",
+    "sections": [
+      "headline",
+      "before",
+      "whatsNew",
+      "theRuleNow",
+      "whoItAffects",
+      "whatToKnow",
+      "wrap"
+    ]
+  }
+}

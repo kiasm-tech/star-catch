@@ -8,7 +8,7 @@ import type {
   SyntheticFixtureFiles,
 } from "@star-catch/pipeline";
 
-/** Fixtures on disk: snapshots/, webhooks/ and synthetic/<name>/{snapshot,expected}.json. */
+/** Fixtures on disk: snapshots/, webhooks/ and synthetic/<name>/{snapshot,expected,expected-sections}.json. */
 export class FileFixtureStore implements FixtureReader, FixtureWriter {
   constructor(private readonly dir: string) {}
 
@@ -29,6 +29,10 @@ export class FileFixtureStore implements FixtureReader, FixtureWriter {
         name,
         snapshot: await readJson(path.join(root, name, "snapshot.json")),
         expected: await readJson(path.join(root, name, "expected.json")),
+        sections: await readJson(path.join(root, name, "expected-sections.json")).catch((error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return undefined;
+          throw error;
+        }),
       })),
     );
   }
