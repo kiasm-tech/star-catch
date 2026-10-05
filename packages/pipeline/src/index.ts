@@ -39,6 +39,7 @@ export { CHAPTER_TITLES, DRAFT_RULES, SECTION_RULES, type Include, type SectionR
 export { gatesOf, isUnsafe } from "./script/gates.js";
 export { CAP_SECONDS, WORDS_PER_MINUTE, fitToCap, selectSections, type Fit, type SelectOptions } from "./script/select.js";
 export { FactIndex } from "./script/facts-index.js";
+export { buildVisual, changedCondition, outcomesOf, type Built, type PrInfo, type VisualInput } from "./visuals/build.js";
 export { buildContext, type ContextOptions, type ContextPorts } from "./usecases/build-context.js";
 export { mockClassifier, modelClassifier } from "./classifier.js";
 export type { Classifier, LabelCache } from "@star-catch/changes";
