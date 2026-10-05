@@ -198,3 +198,20 @@ describe("cli eval-classify", () => {
     expect(await run(["eval-classify", "99-nope"], mockEnv(), io)).toBe(2);
   });
 });
+
+describe("cli script", () => {
+  it("prints both scripts of PR #921 with the template writer, sections and flags on stderr", async () => {
+    expect(await run(["script", path.join(dir, "synthetic", "15-rate-limit-per-org")], mockEnv(), io)).toBe(0);
+    const scripts = JSON.parse(out.join("\n"));
+    expect(Object.keys(scripts)).toEqual(["technical", "business"]);
+    expect(err[0]).toMatch(/^technical \(full, \d+ words\): title, problem, changeMap, structureChange, fromOutside, interaction, rule, reach, verification, risksRollout, wrap$/);
+    expect(err.at(-1)).toMatch(/by mock@1 and template@1$/);
+  });
+
+  it("asks for a writer model before writing for real", async () => {
+    const env = { STAR_CATCH_MOCK: "false", STAR_CATCH_MOCK_LLM: "false", STAR_CATCH_FIXTURES_DIR: dir };
+    expect(await run(["script", path.join(dir, "synthetic", "05-condition-change")], env, io)).toBe(2);
+    expect(err.at(-1)).toMatch(/^Set STAR_CATCH_CLASSIFIER_MODEL/);
+  });
+});
+

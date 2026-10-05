@@ -10,7 +10,16 @@ import {
   OpenAiLlm,
   type StarCatchDb,
 } from "@star-catch/adapters";
-import { mockClassifier, modelClassifier, type ContextPorts, type PullRequestSource } from "@star-catch/pipeline";
+import {
+  mockClassifier,
+  modelClassifier,
+  modelWriter,
+  templateWriter,
+  type ContextPorts,
+  type Llm,
+  type PullRequestSource,
+  type ScriptWriter,
+} from "@star-catch/pipeline";
 
 export type Env = Record<string, string | undefined>;
 
@@ -31,6 +40,15 @@ export interface Services {
   webhookSecret(): string;
   /** Built on first use: only commands that classify need a model and a key. */
   classification(): Classification;
+  /** The narration writer: the template offline, else STAR_CATCH_WRITER_MODEL (or the classifier's model). */
+  writer(): { writer: ScriptWriter; paid: boolean };
+}
+
+/** A hosted model by the keys that are set: Anthropic first, then an OpenAI-compatible endpoint. */
+function llmFor(env: Env, model: string): Llm {
+  if (env.ANTHROPIC_API_KEY) return new AnthropicLlm({ apiKey: env.ANTHROPIC_API_KEY, model });
+  if (env.OPENAI_API_KEY) return new OpenAiLlm({ apiKey: env.OPENAI_API_KEY, model, ...(env.OPENAI_BASE_URL && { baseURL: env.OPENAI_BASE_URL }) });
+  throw new UsageError(`Set ANTHROPIC_API_KEY, or OPENAI_API_KEY (and OPENAI_BASE_URL for Azure AI Foundry), to call ${model}`);
 }
 
 /** The composition root: the only place that picks adapters. */
@@ -60,14 +78,15 @@ export function compose(env: Env): Services {
         throw new UsageError("Set STAR_CATCH_CLASSIFIER_MODEL to the model that labels changes (e.g. claude-haiku-4-5), or STAR_CATCH_MOCK_LLM=true for the offline classifier");
       }
       const labelCache = new FileLabelCache(env.STAR_CATCH_LABEL_CACHE ?? DEFAULT_LABEL_CACHE);
-      if (env.ANTHROPIC_API_KEY) {
-        return { classifier: modelClassifier(new AnthropicLlm({ apiKey: env.ANTHROPIC_API_KEY, model }), model), labelCache, paid: true };
+      return { classifier: modelClassifier(llmFor(env, model), model), labelCache, paid: true };
+    },
+    writer() {
+      if (isMock("llm", env)) return { writer: templateWriter, paid: false };
+      const model = env.STAR_CATCH_WRITER_MODEL ?? env.STAR_CATCH_CLASSIFIER_MODEL;
+      if (!model) {
+        throw new UsageError("Set STAR_CATCH_WRITER_MODEL (or STAR_CATCH_CLASSIFIER_MODEL) to the model that writes narration, or STAR_CATCH_MOCK_LLM=true for the template writer");
       }
-      if (env.OPENAI_API_KEY) {
-        const llm = new OpenAiLlm({ apiKey: env.OPENAI_API_KEY, model, ...(env.OPENAI_BASE_URL && { baseURL: env.OPENAI_BASE_URL }) });
-        return { classifier: modelClassifier(llm, model), labelCache, paid: true };
-      }
-      throw new UsageError(`Set ANTHROPIC_API_KEY, or OPENAI_API_KEY (and OPENAI_BASE_URL for Azure AI Foundry), to call ${model}`);
+      return { writer: modelWriter(llmFor(env, model), model), paid: true };
     },
   };
 }

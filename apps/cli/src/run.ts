@@ -1,6 +1,7 @@
 import { compose, UsageError, type Env } from "./compose.js";
 import { analyze, analyzeUsage } from "./commands/analyze.js";
 import { context, contextUsage } from "./commands/context.js";
+import { script, scriptUsage } from "./commands/script.js";
 import { evalClassify, evalClassifyUsage } from "./commands/eval-classify.js";
 import { fixtures, fixturesUsage } from "./commands/fixtures.js";
 import { migrate, migrateUsage } from "./commands/migrate.js";
@@ -8,8 +9,8 @@ import { record, recordUsage } from "./commands/record.js";
 import { replay, replayUsage } from "./commands/replay.js";
 import type { Io } from "./io.js";
 
-const commands = { record, fixtures, analyze, context, "eval-classify": evalClassify, migrate, replay } as const;
-const usage = ["Usage: pnpm cli <command>", "", `  ${recordUsage}`, `  ${fixturesUsage}`, `  ${analyzeUsage}`, `  ${contextUsage}`, `  ${evalClassifyUsage}`, `  ${migrateUsage}`, `  ${replayUsage}`].join("\n");
+const commands = { record, fixtures, analyze, context, script, "eval-classify": evalClassify, migrate, replay } as const;
+const usage = ["Usage: pnpm cli <command>", "", `  ${recordUsage}`, `  ${fixturesUsage}`, `  ${analyzeUsage}`, `  ${contextUsage}`, `  ${scriptUsage}`, `  ${evalClassifyUsage}`, `  ${migrateUsage}`, `  ${replayUsage}`].join("\n");
 
 /** Exit codes: 0 done, 1 failed, 2 used wrongly. */
 export async function run(argv: string[], env: Env, io: Io): Promise<number> {
