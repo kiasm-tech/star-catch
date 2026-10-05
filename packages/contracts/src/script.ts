@@ -14,6 +14,7 @@ export const TECHNICAL_SECTIONS = [
   "structureChange",
   "contractChange",
   "dataChange",
+  "fromOutside",
   "interaction",
   "lifecycle",
   "rule",
