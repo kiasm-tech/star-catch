@@ -108,6 +108,26 @@ describe("buildVisual", () => {
     expect(built.flags).toEqual(["changeMap: kept the first 7 of 9 components"]);
   });
 
+  it("opens a map with one component into what changed in it", async () => {
+    const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
+    const unit = context.units.find((u) => u.verdict !== "notAChange")!;
+    const one: Context = {
+      ...context,
+      units: [
+        { ...unit, id: "src/cart/totals.ts#itemTotal", file: "src/cart/totals.ts", name: "itemTotal", component: "cart", refactorings: ["rename"] },
+        { ...unit, id: "src/cart/totals.ts#cartTotal", file: "src/cart/totals.ts", name: "cartTotal", component: "cart", refactorings: [], changeType: "bodyChanged" },
+      ],
+      concerns: [],
+    };
+    const input = { context: one, pr: { fullName: "acme/shop", number: 1, title: "x" }, cut: "technical" as const, plan: selectSections(one, "technical", { open: false }) };
+    const map = VisualSchema.parse(buildVisual("changeMap", input).visual) as Extract<Visual, { type: "componentMap" }>;
+    expect(map.data.nodes[0]!.changes).toEqual([
+      { file: "src/cart/totals.ts", name: "item total", change: "renamed" },
+      { file: "src/cart/totals.ts", name: "cart total", change: "changed" },
+    ]);
+    expect(map.data.nodes[0]!.box).toEqual({ x: 220, y: (562 - 156) / 2, w: 560, h: 64 + 32 + 2 * 30 });
+  });
+
   it("lists each component's changed files, first four by rank, and makes room for them", async () => {
     const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
     const unit = context.units[0]!;

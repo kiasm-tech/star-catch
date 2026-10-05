@@ -161,6 +161,16 @@ const beforeAfter: Builder = (s, { pr }, flags) => {
   };
 };
 
+const changeWord = (u: ChangeUnit): "added" | "removed" | "changed" | "renamed" | "moved" =>
+  u.refactorings.includes("rename") ? "renamed" : u.changeType === "added" || u.changeType === "removed" || u.changeType === "moved" ? u.changeType : "changed";
+
+/** The one box of a single-component map, sized for its files and the changes under them. */
+function opened(files: number, changes: number) {
+  const w = 560;
+  const h = 64 + files * 32 + changes * 30;
+  return { x: (1000 - w) / 2, y: Math.max(20, Math.round((562 - h) / 2)), w, h };
+}
+
 function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new Set()): Visual {
   const changed = s.ranked(s.context.units.filter((u) => u.verdict !== "notAChange" && u.component !== ""));
   const components = top([...new Set(changed.map((u) => u.component))], "components", flags);
@@ -179,9 +189,17 @@ function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new 
       return [c, all.slice(0, MAX_FILES)] as const;
     }),
   );
-  // Boxes grow to list their files: a line each under the name.
+  // One component opens to show what changed in it; otherwise boxes grow to list their files.
+  const only = components.length === 1 ? components[0]! : undefined;
+  const changes = only
+    ? top(
+        changed.filter((u) => u.component === only && u.unitKind !== "file").map((u) => ({ file: u.file, name: clip(humanize(u.name)), change: changeWord(u) })),
+        "changes",
+        flags,
+      )
+    : [];
   const most = Math.max(0, ...[...files.values()].map((f) => f.length));
-  const boxes = rows(components.length, 72 + most * 30);
+  const boxes = only && changes.length > 0 ? [opened(files.get(only)!.length, changes.length)] : rows(components.length, 72 + most * 30);
   return {
     type: "componentMap",
     data: {
@@ -191,6 +209,7 @@ function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new 
         box: boxes[i]!,
         changed: true,
         ...(files.get(c)!.length > 0 && { files: files.get(c)! }),
+        ...(c === only && changes.length > 0 && { changes }),
         ...(focusUnits.size > 0 && { focus: changed.some((u) => u.component === c && focusUnits.has(u.id)) }),
       })),
       edges: [...edges.values()],
