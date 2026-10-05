@@ -16,6 +16,7 @@ import { labelsOf, mapLabels } from "../visuals/labels.js";
 import { clip, deCode, humanize } from "../visuals/words.js";
 import { checkSection, labelProblem, wordCount, type Checked } from "./checks.js";
 import { CHAPTER_TITLES, SECTION_FACTS, SECTION_PURPOSES, SECTION_TITLES } from "./sections.js";
+import { templateWriter } from "./template-writer.js";
 import { CAP_SECONDS, WORDS_PER_MINUTE, selectSections } from "./select.js";
 
 export interface ScriptOptions {
@@ -177,6 +178,11 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
       } catch (error) {
         fail(p.brief.id, error);
       }
+    }
+    // Still nothing: the template's line, which every section has, rather than a silent scene.
+    if (checked.sentences.length === 0 && options.writer.id !== templateWriter.id) {
+      const fallback = check(p, await templateWriter.write({ ...shared, ...p.brief }));
+      if (fallback.sentences.length > 0) checked = { ...fallback, flags: [...fallback.flags, "written by the template: the writer left it empty"] };
     }
     flags.push(...[...p.visualFlags, ...checked.flags].map((message) => ({ sectionId: p.brief.id, message })));
     sections.set(p.brief.id, {

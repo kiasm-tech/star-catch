@@ -142,7 +142,7 @@ describe("writers", () => {
     };
     const scripts = await scriptsOf(snapshotOf("05-condition-change"), failing);
     expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "the writer failed: timeout" });
-    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "written by the template: the writer left it empty" });
     // Every section once, and the failed one a second time.
     expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length + 1);
   });
@@ -177,7 +177,7 @@ describe("writers", () => {
     // Source ids keep their names (they're references), but nothing the model reads as words does.
     const read = JSON.parse(requests[0]!.user) as { sentences: { text: string }[]; sections: { facts: { value: unknown }[] }[] };
     expect(JSON.stringify([read.sentences, read.sections.map((x) => x.facts.map((f) => f.value))])).not.toMatch(/bulkDiscount/);
-    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "written by the template: the writer left it empty" });
     expect(sectionsOf(scripts.technical!).find((x) => x.id === "title")!.narration).toBe("Apply the bulk discount from 5 units.");
   });
 
@@ -194,6 +194,18 @@ describe("writers", () => {
     const scripts = await scriptsOf(snapshotOf("05-condition-change"), writer);
     expect(asked).toEqual([["nothing was written for this section"]]);
     expect(sectionsOf(scripts.technical!).find((x) => x.id === "rule")!.narration).toBe("The threshold for the bulk discount moved.");
+  });
+
+  it("falls back to the template's line when the writer leaves a section empty twice", async () => {
+    const writer: ScriptWriter = {
+      id: "fake",
+      writeCut: async ({ sections }) => ({ sections: Object.fromEntries(sections.map((x) => [x.id, x.id === "title" ? [] : [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]])) }),
+      write: async () => [],
+    };
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), writer);
+    const title = sectionsOf(scripts.technical!).find((x) => x.id === "title")!;
+    expect(title.narration).toBe("Apply the bulk discount from 5 units.");
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "title", message: "written by the template: the writer left it empty" });
   });
 
   it("gives a section the checks emptied one more try, saying why", async () => {
