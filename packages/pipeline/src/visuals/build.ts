@@ -13,7 +13,7 @@ import {
 } from "@kiasm-tech/star-catch-contracts";
 import { CHAPTER_TITLES } from "../script/sections.js";
 import { FactIndex } from "../script/facts-index.js";
-import { lanes, rows } from "./layout.js";
+import { lanes, rows, stack } from "./layout.js";
 import { clip, humanize, plainTitle, testTitle } from "./words.js";
 
 /** What a visual may say about the PR itself; never its state (open or merged). */
@@ -171,7 +171,21 @@ function opened(files: number, changes: number) {
   return { x: (1000 - w) / 2, y: Math.max(20, Math.round((562 - h) / 2)), w, h };
 }
 
-function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new Set()): Visual {
+/** The unchanged parts worth showing beside `components`: the ones they import first, then the biggest. */
+function neighboursOf(s: Source, components: string[]): { names: string[]; uses: { from: string; to: string }[] } {
+  const layout = s.context.layout;
+  const room = MAX_PRIMARY - components.length;
+  if (!layout || room <= 0) return { names: [], uses: [] };
+  const uses = layout.uses.filter((u) => components.includes(u.from));
+  const used = new Set(uses.map((u) => u.to));
+  const names = [...layout.neighbours]
+    .sort((a, b) => Number(used.has(b.component)) - Number(used.has(a.component)))
+    .slice(0, room)
+    .map((n) => n.component);
+  return { names, uses: uses.filter((u) => names.includes(u.to)) };
+}
+
+function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new Set(), withNeighbours = false): Visual {
   const changed = s.ranked(s.context.units.filter((u) => u.verdict !== "notAChange" && u.component !== ""));
   const components = top([...new Set(changed.map((u) => u.component))], "components", flags);
   const of = new Map(changed.map((u) => [u.id, u.component]));
@@ -199,19 +213,28 @@ function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new 
       )
     : [];
   const most = Math.max(0, ...[...files.values()].map((f) => f.length));
-  const boxes = only && changes.length > 0 ? [opened(files.get(only)!.length, changes.length)] : rows(components.length, 72 + most * 30);
+  const neighbours = withNeighbours ? neighboursOf(s, components) : { names: [], uses: [] };
+  for (const u of neighbours.uses) edges.set(`edge:${u.from}->${u.to}`, { id: `edge:${u.from}->${u.to}`, from: `component:${u.from}`, to: `component:${u.to}` });
+  // The changed parts on top, the unchanged ones they sit among in a row below.
+  const [boxes, around] = stack([
+    only && changes.length > 0 ? [opened(files.get(only)!.length, changes.length)] : rows(components.length, 72 + most * 30),
+    rows(neighbours.names.length),
+  ]);
   return {
     type: "componentMap",
     data: {
-      nodes: components.map((c, i) => ({
-        id: `component:${c}`,
-        label: c,
-        box: boxes[i]!,
-        changed: true,
-        ...(files.get(c)!.length > 0 && { files: files.get(c)! }),
-        ...(c === only && changes.length > 0 && { changes }),
-        ...(focusUnits.size > 0 && { focus: changed.some((u) => u.component === c && focusUnits.has(u.id)) }),
-      })),
+      nodes: [
+        ...components.map((c, i) => ({
+          id: `component:${c}`,
+          label: c,
+          box: boxes[i]!,
+          changed: true,
+          ...(files.get(c)!.length > 0 && { files: files.get(c)! }),
+          ...(c === only && changes.length > 0 && { changes }),
+          ...(focusUnits.size > 0 && { focus: changed.some((u) => u.component === c && focusUnits.has(u.id)) }),
+        })),
+        ...neighbours.names.map((n, i) => ({ id: `component:${n}`, label: n, box: around![i]!, changed: false })),
+      ],
       edges: [...edges.values()],
     },
   };
@@ -470,7 +493,7 @@ const BUILDERS: Record<SectionId | DraftSectionId, Builder | undefined> & Record
   headline: titleCard,
   problem: beforeAfter,
   before: userJourney,
-  changeMap: (s, _i, flags) => componentMap(s, flags),
+  changeMap: (s, _i, flags) => componentMap(s, flags, new Set(), true),
   reviewFocus: (s, _i, flags) => componentMap(s, flags, new Set(s.context.concerns.filter((c) => c.rank <= 3).flatMap((c) => c.unitIds))),
   structureChange: architectureMorph,
   contractChange: contractCard,

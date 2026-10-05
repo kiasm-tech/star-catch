@@ -73,7 +73,7 @@ function narrate(visual: Visual, request: WriteRequest, src: Sources): WrittenSe
     case "componentMap": {
       const focus = visual.data.nodes.filter((n) => n.focus);
       if (focus.length > 0) return [say(`Review first: ${list(focus.map((n) => `${mark(n.id)}${n.label}`))}`, src.facts("shape", "components"))];
-      return [say(`This change touches ${list(visual.data.nodes.map((n) => `${mark(n.id)}${n.label}`))}`, src.facts("shape", "components"))];
+      return [say(`This change touches ${list(visual.data.nodes.filter((n) => n.changed).map((n) => `${mark(n.id)}${n.label}`))}`, src.facts("shape", "components"))];
     }
     case "architectureMorph": {
       const by = (state: string) => visual.data.nodes.filter((n) => n.state === state);

@@ -14,6 +14,8 @@ export function revealable(visual: Visual): Element[] {
     case "beforeAfterSplit":
       return [...visual.data.before.items, ...visual.data.after.items].map((i) => ({ id: i.id, label: i.text }));
     case "componentMap":
+      // Unchanged neighbours are context: they're on screen from the start, not revealed by a word.
+      return visual.data.nodes.filter((n) => n.changed).map((n) => ({ id: n.id, label: n.label }));
     case "architectureMorph":
     case "dataFlow":
       return "nodes" in visual.data ? visual.data.nodes.map((n) => ({ id: n.id, label: n.label })) : visual.data.places;
