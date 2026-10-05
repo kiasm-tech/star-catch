@@ -57,4 +57,24 @@ describe("entry points", () => {
     const file: File = { path: "app/page.tsx", status: "modified", base: "export default function P() {\n    return <p/>;\n}\n", head: "export default function P() {\n  return <p/>;\n}\n" };
     expect(await entryPoints(file)).toEqual([]);
   });
+
+  it.each<[string, File, string]>([
+    ["an App Router handler", changed("app/(shop)/api/orders/route.ts", "export async function POST() {\n  return 2;\n}\n"), "POST /api/orders"],
+    ["an App Router page", changed("app/billing/page.tsx", "export default function Billing() {\n  return <p>2</p>;\n}\n"), "/billing"],
+    ["a Pages Router index", changed("pages/index.tsx", "export default function Home() {\n  return <p>2</p>;\n}\n"), "/"],
+    ["a Pages Router API route", changed("pages/api/orders.ts", "export default function handler() {\n  return 2;\n}\n"), "/api/orders"],
+    ["an Express registration", changed("src/server.ts", 'export function listOrders() {\n  return 2;\n}\napp.get("/orders", listOrders);\n'), "GET /orders"],
+    ["a FastAPI decorator", changed("api/orders.py", '@router.post("/orders")\ndef create():\n    return 2\n'), "POST /orders"],
+    ["a Flask route without a method", changed("app.py", '@app.route("/")\ndef index():\n    return 2\n'), "/"],
+    ["a Spring mapping", changed("src/main/java/Orders.java", 'class Orders {\n  @GetMapping(path = "/orders")\n  public int list() { return 2; }\n}\n'), "GET /orders"],
+  ])("records the route of %s", async (_name, file, expected) => {
+    const [entry] = (await analyze({ files: [file] })).entryPoints;
+    expect([entry?.route?.method, entry?.route?.path].filter((p) => p !== undefined).join(" ")).toBe(expected);
+  });
+
+  it("records no route for a job", async () => {
+    const [entry] = (await analyze({ files: [changed("tasks.py", "@shared_task\ndef send():\n    return 2\n")] })).entryPoints;
+    expect(entry).toEqual({ unitId: "tasks.py#send", type: "job" });
+  });
 });
+
