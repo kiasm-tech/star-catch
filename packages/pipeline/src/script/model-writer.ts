@@ -1,38 +1,56 @@
-/** A hosted model as the writer: one structured call per section, rules in the prompt, checks after. */
+/** A hosted model as the writer: one structured call per cut for the draft, one per section for repairs and fixes. */
 import { z } from "zod";
 import type { Llm } from "../ports/llm.js";
-import type { ScriptWriter, WriteRequest } from "../ports/script-writer.js";
+import type { CutRequest, ScriptWriter, SectionBrief, WriteRequest, WrittenSentence } from "../ports/script-writer.js";
 
-export const WRITER_PROMPT = `You write the narration for one section of a short video that explains a pull request, and the same text becomes the article. You get the section, what its picture shows, and the facts. Write only from them.
-
-Rules:
-- Write plain spoken sentences, no lists, no markdown, no headings.
-- Stay under the word limit.
+const RULES = `Rules:
+- Each section answers only its own "purpose". Never repeat what another section says; the reader hears them in order.
+- Plain spoken sentences: no lists, no markdown, no headings. One idea per sentence.
+- Stay under each section's word limit.
 - Every sentence lists its sources: ids from the facts' "sources", sentence ids, or "pr:title". A sentence you can't source, don't write.
 - Numbers: only ones that appear in "evidence" facts or in the picture's element labels. Never compute or round a number.
-- Before the words that talk about an element of the picture, put <mark name="ELEMENT_ID"/> with one of the listed element ids, so the picture reveals it as it's spoken. Mark every element once.
-- Technical cut: explain components, interactions and data; never name functions, files, lines or code identifiers, and never write code.
-- Business cut: explain what changes for people and products, in everyday words; no component names, no code words, no acronyms.
-- If an instruction from the developer is given, follow it within these rules.`;
+- Before the words that talk about an element of the picture, put <mark name="ELEMENT_ID"/> with one of that section's element ids, so the picture reveals it as it's spoken. Mark every element once.
+- Technical cut: explain components, interactions and data. Never name functions, files, lines or code identifiers, never write code, even if the PR's text does.
+- Business cut: what changes for people and products, in everyday words. No component names, no code, no tests, no acronyms, no internal mechanics.
+- If the developer gave an instruction, follow it within these rules.`;
 
-const AnswerSchema = z.object({
-  sentences: z.array(z.object({ text: z.string().min(1), sources: z.array(z.string()) })),
-});
+export const WRITER_PROMPT = `You write the narration for one section of a short video that explains a pull request; the same text becomes the article. You get the section's purpose, what its picture shows and the facts it is about. Write only from them.
+
+${RULES}
+- If "repair" is given, your last attempt broke these rules for the reasons listed: write the section again without those problems.`;
+
+export const WRITER_CUT_PROMPT = `You write the narration for every section of a short video that explains a pull request; the same text becomes the article. The sections play in the order given and tell one story. For each, you get its purpose, what its picture shows and the facts it is about. Write only from them.
+
+${RULES}
+- The first section says what happened in one sentence; the last recaps in one or two sentences and adds nothing new.`;
+
+const SentencesSchema = z.array(z.object({ text: z.string().min(1), sources: z.array(z.string()) }));
+const SENTENCES = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: { text: { type: "string" }, sources: { type: "array", items: { type: "string" } } },
+    required: ["text", "sources"],
+    additionalProperties: false,
+  },
+};
 
 export const WRITER_SCHEMA: Record<string, unknown> = {
   type: "object",
+  properties: { sentences: SENTENCES },
+  required: ["sentences"],
+  additionalProperties: false,
+};
+
+export const WRITER_CUT_SCHEMA: Record<string, unknown> = {
+  type: "object",
   properties: {
-    sentences: {
+    sections: {
       type: "array",
-      items: {
-        type: "object",
-        properties: { text: { type: "string" }, sources: { type: "array", items: { type: "string" } } },
-        required: ["text", "sources"],
-        additionalProperties: false,
-      },
+      items: { type: "object", properties: { id: { type: "string" }, sentences: SENTENCES }, required: ["id", "sentences"], additionalProperties: false },
     },
   },
-  required: ["sentences"],
+  required: ["sections"],
   additionalProperties: false,
 };
 
@@ -43,30 +61,47 @@ function fingerprint(text: string): string {
   return hash.toString(16).padStart(8, "0");
 }
 
-export const WRITER_PROMPT_ID = `writer-${fingerprint(WRITER_PROMPT + JSON.stringify(WRITER_SCHEMA))}`;
+export const WRITER_PROMPT_ID = `writer-${fingerprint(WRITER_PROMPT + WRITER_CUT_PROMPT + JSON.stringify(WRITER_SCHEMA) + JSON.stringify(WRITER_CUT_SCHEMA))}`;
 
-function payload(request: WriteRequest): string {
-  return JSON.stringify({
-    cut: request.cut,
-    section: request.section.heading,
-    wordLimit: request.wordLimit,
-    ...(request.instruction && { instruction: request.instruction }),
-    prTitle: request.pr.title,
-    picture: { type: request.visual.type, elements: request.elements },
-    facts: request.facts.map((f) => ({ group: f.group, key: f.key, value: f.value, sources: f.sources })),
-    sentences: request.sentences.map((s) => ({ id: s.id, class: s.class, text: s.text })),
-  });
-}
+const section = (brief: SectionBrief) => ({
+  id: brief.id,
+  heading: brief.heading,
+  purpose: brief.purpose,
+  wordLimit: brief.wordLimit,
+  picture: { type: brief.visual.type, elements: brief.elements },
+  facts: brief.facts.map((f) => ({ group: f.group, key: f.key, value: f.value, sources: f.sources })),
+});
+
+const common = (request: WriteRequest | CutRequest) => ({
+  cut: request.cut,
+  prTitle: request.pr.title,
+  ...(request.instruction && { instruction: request.instruction }),
+  sentences: request.sentences.map((s) => ({ id: s.id, class: s.class, text: s.text })),
+});
 
 /** Its id names the model and the prompt version; an unusable answer throws, so the section is flagged. */
 export function modelWriter(llm: Llm, model: string): ScriptWriter {
   return {
     id: `model:${model}@${WRITER_PROMPT_ID}`,
     async write(request, signal) {
-      const raw = await llm.completeJson({ system: WRITER_PROMPT, user: payload(request), schema: WRITER_SCHEMA }, signal);
-      const parsed = AnswerSchema.safeParse(raw);
+      const user = JSON.stringify({ ...common(request), section: section(request), ...(request.repair && { repair: request.repair }) });
+      const parsed = z.object({ sentences: SentencesSchema }).safeParse(await llm.completeJson({ system: WRITER_PROMPT, user, schema: WRITER_SCHEMA }, signal));
       if (!parsed.success) throw new Error("the model's answer didn't match the schema");
       return parsed.data.sentences;
+    },
+    async writeCut(request, signal) {
+      const user = JSON.stringify({ ...common(request), sections: request.sections.map(section) });
+      const raw = await llm.completeJson({ system: WRITER_CUT_PROMPT, user, schema: WRITER_CUT_SCHEMA }, signal);
+      const asked = new Set(request.sections.map((s) => s.id));
+      const answers = (typeof raw === "object" && raw !== null && Array.isArray((raw as { sections?: unknown }).sections) ? (raw as { sections: unknown[] }).sections : []);
+      if (answers.length === 0) throw new Error("the model's answer didn't match the schema");
+      const written: Record<string, WrittenSentence[]> = {};
+      // Each section on its own: one malformed answer costs that section, not the cut.
+      for (const answer of answers) {
+        const parsed = z.object({ id: z.string(), sentences: SentencesSchema }).safeParse(answer);
+        if (parsed.success && asked.has(parsed.data.id)) written[parsed.data.id] = parsed.data.sentences;
+      }
+      return written;
     },
   };
 }
