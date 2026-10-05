@@ -7,3 +7,4 @@ export * from "./script.js";
 export * from "./visuals.js";
 export * from "./update-script.js";
 export * from "./catch.js";
+export * from "./api.js";
