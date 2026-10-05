@@ -13,6 +13,13 @@ describe("VisualSchema", () => {
     expect(eight.error?.issues[0]?.message).toBe("at most 7 components");
   });
 
+  it("lists up to four changed files under a component", () => {
+    const withFiles = (n: number) => ({ type: "componentMap", data: { nodes: [{ ...nodes(1)[0], files: Array.from({ length: n }, (_, i) => `src/c0/f${i}.ts`) }], edges: [] } });
+    expect(VisualSchema.safeParse(withFiles(4)).success).toBe(true);
+    expect(VisualSchema.safeParse(withFiles(5)).success).toBe(false);
+    expect(VisualSchema.safeParse({ type: "componentMap", data: { nodes: nodes(1), edges: [] } }).success).toBe(true);
+  });
+
   it("counts messages and outcomes together in a system sequence diagram", () => {
     const participants = [
       { id: "actor", label: "API client", x: 150, role: "actor" },
