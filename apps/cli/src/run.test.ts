@@ -1,4 +1,5 @@
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { CatchVersionSchema } from "@kiasm-tech/star-catch-contracts";
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -212,6 +213,34 @@ describe("cli script", () => {
     const env = { STAR_CATCH_MOCK: "false", STAR_CATCH_MOCK_LLM: "false", STAR_CATCH_FIXTURES_DIR: dir };
     expect(await run(["script", path.join(dir, "synthetic", "05-condition-change")], env, io)).toBe(2);
     expect(err.at(-1)).toMatch(/^Set STAR_CATCH_CLASSIFIER_MODEL/);
+  });
+});
+
+describe("cli catch", () => {
+  it("exports every PR that gets an update, the same bytes twice, and skips the rest", async () => {
+    const out = path.join(dir, "catches");
+    expect(await run(["catch", "--all", "--out", out], mockEnv(), io)).toBe(0);
+    const files = (await readdir(out)).sort();
+    expect(files).toContain("acme__shop__921.json");
+    expect(files).toContain("pmndrs__zustand__3555.json");
+    expect(files.filter((f) => /acme__shop__10[124]\.json/.test(f))).toEqual([]);
+    expect(err).toContainEqual("acme__shop__101: no update, skipped");
+    const first = await readFile(path.join(out, "acme__shop__921.json"), "utf8");
+    const parsed = CatchVersionSchema.parse(JSON.parse(first));
+    expect(parsed.pr).toMatchObject({ fullName: "acme/shop", number: 921, state: "merged" });
+    expect(parsed.generatedBy).toEqual({ classifier: "mock@1", writer: "template@1" });
+    expect(await run(["catch", "--all", "--out", out], mockEnv(), io)).toBe(0);
+    expect(await readFile(path.join(out, "acme__shop__921.json"), "utf8")).toBe(first);
+  });
+
+  it("prints one catch to stdout", async () => {
+    expect(await run(["catch", path.join(dir, "synthetic", "08-ui-with-test")], mockEnv(), io)).toBe(0);
+    expect(CatchVersionSchema.parse(JSON.parse(out.join("\n"))).catchId).toBe("acme__shop__108");
+  });
+
+  it("needs a target or --all with --out", async () => {
+    expect(await run(["catch"], mockEnv(), io)).toBe(2);
+    expect(await run(["catch", "--all"], mockEnv(), io)).toBe(2);
   });
 });
 

@@ -16,6 +16,7 @@ pnpm cli analyze fixtures/synthetic/09-ts-extract          # a fixture's change 
 pnpm bench                                                # analysis timings on the recorded PRs
 STAR_CATCH_MOCK_LLM=true pnpm cli context fixtures/synthetic/08-ui-with-test   # a fixture's context, offline
 STAR_CATCH_MOCK_LLM=true pnpm cli script fixtures/synthetic/15-rate-limit-per-org   # both cuts' scripts, template writer
+STAR_CATCH_MOCK_LLM=true pnpm cli catch --all --out /tmp/catches              # every catch as Crux reads it
 STAR_CATCH_CLASSIFIER_MODEL=… ANTHROPIC_API_KEY=… pnpm eval:classify         # what it would send; --yes sends it
 GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public PR as a fixture
 docker compose up -d --wait                               # local Postgres
