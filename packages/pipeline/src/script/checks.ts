@@ -29,6 +29,8 @@ export interface CheckInput {
   components: string[];
   /** The PR's own declaration names that read as code (`BillingPage`, `persistImpl`); brand names like GraphQL don't. */
   codeNames: string[];
+  /** The section's share of the cut's length; half as much again is flagged. */
+  wordLimit?: number;
 }
 
 export interface Checked {
@@ -53,7 +55,7 @@ function altitude(text: string, cut: Cut, components: string[], codeNames: strin
   return undefined;
 }
 
-export function checkSection({ cut, draft, sentences, visual, known, evidence, components, codeNames }: CheckInput): Checked {
+export function checkSection({ cut, draft, sentences, visual, known, evidence, components, codeNames, wordLimit }: CheckInput): Checked {
   const flags: string[] = [];
   const ids = elementIds(visual);
   const shown = new Set(numbersIn(JSON.stringify(visual.data)));
@@ -90,6 +92,8 @@ export function checkSection({ cut, draft, sentences, visual, known, evidence, c
     kept.pop();
     if (!flags.includes("trimmed to stay under a minute")) flags.push("trimmed to stay under a minute");
   }
+  const total = kept.reduce((n, s) => n + wordCount(s.text), 0);
+  if (wordLimit !== undefined && total > wordLimit * 1.5) flags.push(`longer than its ${wordLimit}-word budget (${total} words)`);
   const marked = new Set(kept.flatMap((s) => [...s.text.matchAll(MARK)].map((m) => m[1]!)));
   const silent = revealable(visual).filter((e) => !marked.has(e.id));
   if (!draft && silent.length > 0) flags.push(`never revealed by the narration: ${silent.map((e) => e.id).join(", ")}`);
