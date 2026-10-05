@@ -39,9 +39,9 @@ export { CHAPTER_TITLES, DRAFT_RULES, SECTION_RULES, type Include, type SectionR
 export { gatesOf, isUnsafe } from "./script/gates.js";
 export { CAP_SECONDS, WORDS_PER_MINUTE, fitToCap, selectSections, type Fit, type SelectOptions } from "./script/select.js";
 export { FactIndex } from "./script/facts-index.js";
-export type { ScriptWriter, WriteRequest, WrittenSentence } from "./ports/script-writer.js";
+export type { CutRequest, ScriptWriter, SectionBrief, WriteRequest, WrittenSentence } from "./ports/script-writer.js";
 export { templateWriter } from "./script/template-writer.js";
-export { modelWriter, WRITER_PROMPT, WRITER_PROMPT_ID } from "./script/model-writer.js";
+export { modelWriter, WRITER_CUT_PROMPT, WRITER_PROMPT, WRITER_PROMPT_ID } from "./script/model-writer.js";
 export { checkSection, type CheckInput, type Checked } from "./script/checks.js";
 export { generateScripts, type ScriptOptions, type Scripts } from "./script/generate.js";
 export { buildScripts, type ScriptPorts } from "./usecases/build-scripts.js";

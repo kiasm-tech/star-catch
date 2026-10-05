@@ -8,7 +8,7 @@ exports[`generateScripts with the template writer > narrates 05 and 08 the same 
     "whatsNew: [message:use]Apply the bulk discount from 5 units. [outcome:description:1]This lowers the threshold from 10 to 5 units so the discount also applies to…",
     "theRuleNow: [condition:after]This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
     "inNumbers: [metric:description:0:5]Customers ordering 5 to 9 units never got the bulk discount, and support keeps getting tickets about it.",
-    "whatToKnow: [risk:rules]How bulk discount works has changed.",
+    "whatToKnow: [risk:rules]This lowers the threshold from 10 to 5 units so the discount also applies to smaller wholesale orders.",
     "wrap: In short: apply the bulk discount from 5 units.",
   ],
   "name": "05-condition-change",
@@ -54,7 +54,7 @@ exports[`generateScripts with the template writer > narrates PR #921 the same wa
     "whatsNew: [message:app/api/orders/route.ts#POST]Rate limits count per organisation, not per key. [outcome:description:1]This counts usage per organisation so that every key of a team shares one limit.",
     "theRuleNow: [condition:after]This counts usage per organisation so that every key of a team shares one limit, and REST, GraphQL and batch ingest now ask the same limiter.",
     "whoItAffects: It affects [area:app/api/orders/route.ts#POST]orders.",
-    "whatToKnow: [risk:rules]How allow request works has changed.",
+    "whatToKnow: [risk:rules]This counts usage per organisation so that every key of a team shares one limit, and REST, GraphQL and batch ingest now ask the same limiter.",
     "wrap: In short: rate limits count per organisation, not per key.",
   ],
   "technical": [

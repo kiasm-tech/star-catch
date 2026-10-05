@@ -9,11 +9,12 @@ import {
   type ScriptSection,
   type SectionPlan,
 } from "@kiasm-tech/star-catch-contracts";
-import type { ScriptWriter, WrittenSentence } from "../ports/script-writer.js";
+import type { ScriptWriter, SectionBrief, WrittenSentence } from "../ports/script-writer.js";
 import { buildVisual, type PrInfo, type VisualInput } from "../visuals/build.js";
 import { revealable } from "../visuals/elements.js";
-import { checkSection, wordCount } from "./checks.js";
-import { CHAPTER_TITLES, SECTION_TITLES } from "./sections.js";
+import { deCode } from "../visuals/words.js";
+import { checkSection, wordCount, type Checked } from "./checks.js";
+import { CHAPTER_TITLES, SECTION_FACTS, SECTION_PURPOSES, SECTION_TITLES } from "./sections.js";
 import { CAP_SECONDS, WORDS_PER_MINUTE, selectSections } from "./select.js";
 
 export interface ScriptOptions {
@@ -57,50 +58,80 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
         .filter((n) => /^[a-z]+[A-Z]|^[A-Z][a-z0-9]+[A-Z]|_/.test(n) && /^[\w$]+$/.test(n)),
     ),
   ];
-  const sentences = context.sentences.filter((s) => s.class !== "noise");
+  // The writer reads the PR's words with code names spelled out, so it has nothing to copy them from.
+  const sentences = context.sentences.filter((s) => s.class !== "noise").map((s) => ({ ...s, text: deCode(s.text) }));
   const flags: ScriptFlag[] = [];
+  const fail = (sectionId: string, error: unknown) =>
+    flags.push({ sectionId, message: `the writer failed: ${error instanceof Error ? error.message : String(error)}` });
 
-  const section = async (id: ScriptSection["id"], wordLimit: number, readMore: boolean, draft: boolean): Promise<ScriptSection> => {
+  type Planned = { brief: SectionBrief; readMore: boolean; draft: boolean; visualFlags: string[] };
+  const planned: Planned[] = [
+    ...plan.chapters.flatMap((c) => c.sections.map((s) => ({ id: s.id as string, wordLimit: s.wordLimit, readMore: s.readMore, draft: false }))),
+    ...plan.draft.map((d) => ({ id: d.id as string, wordLimit: d.wordLimit, readMore: false, draft: true })),
+  ].map(({ id, wordLimit, readMore, draft }) => {
     const built = buildVisual(id as never, input);
-    const heading = SECTION_TITLES[id as keyof typeof SECTION_TITLES];
-    let written: WrittenSentence[] = [];
-    try {
-      written = await options.writer.write(
-        {
-          cut,
-          section: { id, heading },
-          visual: built.visual,
-          elements: revealable(built.visual),
-          facts: context.facts,
-          sentences,
-          pr: { title: pr.title },
-          wordLimit,
-          ...(options.instruction && { instruction: options.instruction }),
-        },
-        options.signal,
-      );
-    } catch (error) {
-      flags.push({ sectionId: id, message: `the writer failed: ${error instanceof Error ? error.message : String(error)}` });
-    }
-    const checked = checkSection({ cut, draft, sentences: written, visual: built.visual, known, evidence, components, codeNames });
-    flags.push(...[...built.flags.map((f) => f.replace(/^[^:]+: /, "")), ...checked.flags].map((message) => ({ sectionId: id, message })));
-    return {
+    const scope = SECTION_FACTS[id as keyof typeof SECTION_FACTS];
+    const brief: SectionBrief = {
       id,
+      heading: SECTION_TITLES[id as keyof typeof SECTION_TITLES],
+      purpose: SECTION_PURPOSES[id as keyof typeof SECTION_PURPOSES],
       visual: built.visual,
+      elements: revealable(built.visual).map((e) => ({ ...e, label: deCode(e.label) })),
+      facts: context.facts
+        .filter((f) => scope.some((s) => s === f.group || s === `${f.group}.${f.key}`))
+        .map((f) => ({ ...f, value: typeof f.value === "string" ? deCode(f.value) : Array.isArray(f.value) ? f.value.map(deCode) : f.value })),
+      wordLimit,
+    };
+    return { brief, readMore, draft, visualFlags: built.flags.map((f) => f.replace(/^[^:]+: /, "")) };
+  });
+
+  const shared = { cut, sentences, pr: { title: pr.title }, ...(options.instruction && { instruction: options.instruction }) };
+  const first = new Map<string, WrittenSentence[]>();
+  if (options.writer.writeCut) {
+    try {
+      const all = await options.writer.writeCut({ ...shared, sections: planned.map((p) => p.brief) }, options.signal);
+      for (const p of planned) first.set(p.brief.id, all[p.brief.id] ?? []);
+    } catch (error) {
+      fail("script", error);
+    }
+  } else {
+    for (const p of planned) {
+      try {
+        first.set(p.brief.id, await options.writer.write({ ...shared, ...p.brief }, options.signal));
+      } catch (error) {
+        fail(p.brief.id, error);
+      }
+    }
+  }
+
+  const check = (p: Planned, written: WrittenSentence[]): Checked =>
+    checkSection({ cut, draft: p.draft, sentences: written, visual: p.brief.visual, known, evidence, components, codeNames, wordLimit: p.brief.wordLimit });
+  const dropped = (c: Checked) => c.flags.filter((f) => f.startsWith("dropped"));
+
+  const sections = new Map<string, ScriptSection>();
+  for (const p of planned) {
+    let checked = check(p, first.get(p.brief.id) ?? []);
+    // One more try for a section the checks emptied or cut, told exactly why.
+    if (dropped(checked).length > 0) {
+      try {
+        const retry = check(p, await options.writer.write({ ...shared, ...p.brief, repair: dropped(checked) }, options.signal));
+        if (dropped(retry).length < dropped(checked).length) checked = retry;
+      } catch (error) {
+        fail(p.brief.id, error);
+      }
+    }
+    flags.push(...[...p.visualFlags, ...checked.flags].map((message) => ({ sectionId: p.brief.id, message })));
+    sections.set(p.brief.id, {
+      id: p.brief.id,
+      visual: p.brief.visual,
       ...voiceMarks(checked.sentences),
       sources: [...new Set(checked.sentences.flatMap((s) => s.sources))],
-      article: { heading, readMore },
-    };
-  };
-
-  const chapters = [];
-  for (const chapter of plan.chapters) {
-    const sections = [];
-    for (const s of chapter.sections) sections.push(await section(s.id, s.wordLimit, s.readMore, false));
-    chapters.push({ id: chapter.id, title: CHAPTER_TITLES[chapter.id], sections });
+      article: { heading: p.brief.heading, readMore: p.readMore },
+    });
   }
-  const draft = [];
-  for (const d of plan.draft) draft.push(await section(d.id, d.wordLimit, false, true));
+
+  const chapters = plan.chapters.map((c) => ({ id: c.id, title: CHAPTER_TITLES[c.id], sections: c.sections.map((s) => sections.get(s.id)!) }));
+  const draft = plan.draft.map((d) => sections.get(d.id)!);
 
   const spokenWords = chapters.flatMap((c) => c.sections.filter((s) => !s.article.readMore)).reduce((n, s) => n + wordCount(s.narration), 0);
   const cap = (CAP_SECONDS[cut] * WORDS_PER_MINUTE) / 60;

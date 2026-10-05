@@ -9,7 +9,7 @@ import { buildScripts } from "../usecases/build-scripts.js";
 import { elementIds } from "../visuals/elements.js";
 import { checkSection } from "./checks.js";
 import { generateScripts } from "./generate.js";
-import { modelWriter, WRITER_PROMPT } from "./model-writer.js";
+import { modelWriter, WRITER_CUT_PROMPT } from "./model-writer.js";
 import { deCode, templateWriter } from "./template-writer.js";
 
 const fixtures = loadSyntheticFixtures();
@@ -115,6 +115,12 @@ describe("the checks", () => {
     expect(flags).toEqual(["removed a mark for an element the visual doesn't have: ghost", "never revealed by the narration: test:a"]);
   });
 
+  it("flags a section that runs well past its word budget", () => {
+    const long = [ok(`${"word ".repeat(40).trim()}.`)];
+    expect(checkSection({ ...base, cut: "technical", draft: false, sentences: long, wordLimit: 20 }).flags).toEqual(["longer than its 20-word budget (40 words)"]);
+    expect(checkSection({ ...base, cut: "technical", draft: false, sentences: long, wordLimit: 30 }).flags).toEqual([]);
+  });
+
   it("trims a section that runs over a minute", () => {
     const long = Array.from({ length: 4 }, () => ok(`${"word ".repeat(60).trim()}.`));
     const { sentences, flags } = check("technical", long);
@@ -130,7 +136,7 @@ describe("writers", () => {
       id: "failing",
       write: async (request) => {
         calls++;
-        if (request.section.id === "rule") throw new Error("timeout");
+        if (request.id === "rule") throw new Error("timeout");
         return templateWriter.write(request);
       },
     };
@@ -140,13 +146,18 @@ describe("writers", () => {
     expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length);
   });
 
-  it("asks the model once per section with the prompt and the schema, and flags an unusable answer", async () => {
+  it("asks the model once per cut, each section with its purpose and only its facts, in de-coded words", async () => {
     const requests: LlmRequest[] = [];
     const llm: Llm = {
       completeJson: async (request) => {
         requests.push(request);
-        const { section } = JSON.parse(request.user) as { section: string };
-        return section === "Rule" ? { nope: true } : { sentences: [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }] };
+        const { sections } = JSON.parse(request.user) as { sections: { id: string }[] };
+        return {
+          sections: [
+            ...sections.map((x) => (x.id === "rule" ? { id: "rule", sentences: "nope" } : { id: x.id, sentences: [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }] })),
+            { id: "unasked", sentences: [{ text: "Hello.", sources: ["pr:title"] }] },
+          ],
+        };
       },
     };
     const writer = modelWriter(llm, "gpt-6-luna");
@@ -154,9 +165,37 @@ describe("writers", () => {
     const snapshot = snapshotOf("05-condition-change");
     const context = await buildContext(snapshot, { classifier: mockClassifier });
     const scripts = await generateScripts(context, { fullName: snapshot.fullName, number: snapshot.number, title: snapshot.title }, { writer, open: false });
-    expect(requests).toHaveLength(sectionsOf(scripts.technical!).length + sectionsOf(scripts.business!).length);
-    expect(requests.every((r) => r.system === WRITER_PROMPT)).toBe(true);
-    expect(JSON.parse(requests[0]!.user)).toMatchObject({ cut: "technical", section: "Title & summary", picture: { type: "titleCard" } });
-    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "the writer failed: the model's answer didn't match the schema" });
+    expect(requests.map((r) => r.system)).toEqual([WRITER_CUT_PROMPT, WRITER_CUT_PROMPT]);
+    const technical = JSON.parse(requests[0]!.user) as { cut: string; sections: { id: string; purpose: string; facts: { group: string }[] }[] };
+    expect(technical.cut).toBe("technical");
+    expect(technical.sections.map((x) => x.id)).toEqual(sectionsOf(scripts.technical!).map((x) => x.id));
+    const rule = technical.sections.find((x) => x.id === "rule")!;
+    expect(rule.purpose).toBe("The rule that decides the outcome, before and after.");
+    expect([...new Set(rule.facts.map((f) => f.group))].sort()).toEqual(["evidence", "intent", "rules"]);
+    // Source ids keep their names (they're references), but nothing the model reads as words does.
+    const read = JSON.parse(requests[0]!.user) as { sentences: { text: string }[]; sections: { facts: { value: unknown }[] }[] };
+    expect(JSON.stringify([read.sentences, read.sections.map((x) => x.facts.map((f) => f.value))])).not.toMatch(/bulkDiscount/);
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
+    expect(sectionsOf(scripts.technical!).find((x) => x.id === "title")!.narration).toBe("Apply the bulk discount from 5 units.");
   });
+
+  it("gives a section the checks emptied one more try, saying why", async () => {
+    const repairs: string[][] = [];
+    const writer: ScriptWriter = {
+      id: "fake",
+      writeCut: async ({ sections }) =>
+        Object.fromEntries(
+          sections.map((x) => [x.id, [{ text: x.id === "rule" ? "The bulkDiscount threshold moved." : "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]]),
+        ),
+      write: async (request) => {
+        repairs.push(request.repair ?? []);
+        return [{ text: "The threshold for the bulk discount moved.", sources: ["pr:title"] }];
+      },
+    };
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), writer);
+    expect(repairs).toEqual([['dropped a sentence that names a code name: "The bulkDiscount threshold moved."']]);
+    expect(sectionsOf(scripts.technical!).find((x) => x.id === "rule")!.narration).toBe("The threshold for the bulk discount moved.");
+    expect(scripts.technical!.flags.filter((f) => f.sectionId === "rule" && f.message.startsWith("dropped"))).toEqual([]);
+  });
+
 });
