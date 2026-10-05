@@ -1,5 +1,6 @@
 /** Each section's visual data, from the context alone (spec-update-structure.md §6–§8). */
 import {
+  MAX_FILES,
   MAX_PRIMARY,
   type ChangeUnit,
   type Context,
@@ -171,7 +172,16 @@ function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new 
     const id = `edge:${from}->${to}`;
     edges.set(id, { id, from: `component:${from}`, to: `component:${to}` });
   }
-  const boxes = rows(components.length);
+  const files = new Map(
+    components.map((c) => {
+      const all = [...new Set(changed.filter((u) => u.component === c).map((u) => u.file))];
+      if (all.length > MAX_FILES) flags.push(`kept the first ${MAX_FILES} of ${all.length} files in ${c}`);
+      return [c, all.slice(0, MAX_FILES)] as const;
+    }),
+  );
+  // Boxes grow to list their files: a line each under the name.
+  const most = Math.max(0, ...[...files.values()].map((f) => f.length));
+  const boxes = rows(components.length, 72 + most * 30);
   return {
     type: "componentMap",
     data: {
@@ -180,6 +190,7 @@ function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new 
         label: c,
         box: boxes[i]!,
         changed: true,
+        ...(files.get(c)!.length > 0 && { files: files.get(c)! }),
         ...(focusUnits.size > 0 && { focus: changed.some((u) => u.component === c && focusUnits.has(u.id)) }),
       })),
       edges: [...edges.values()],

@@ -1,4 +1,4 @@
-import { IMPLEMENTED_VISUALS, VisualSchema, type Context, type Cut, type PullRequestSnapshot } from "@kiasm-tech/star-catch-contracts";
+import { IMPLEMENTED_VISUALS, VisualSchema, type Context, type Cut, type PullRequestSnapshot, type Visual } from "@kiasm-tech/star-catch-contracts";
 import { mockClassifier } from "@star-catch/changes";
 import { loadRecordedSnapshots, loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
@@ -106,6 +106,25 @@ describe("buildVisual", () => {
     const built = buildVisual("changeMap", input);
     expect(VisualSchema.parse(built.visual).type).toBe("componentMap");
     expect(built.flags).toEqual(["changeMap: kept the first 7 of 9 components"]);
+  });
+
+  it("lists each component's changed files, first four by rank, and makes room for them", async () => {
+    const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
+    const unit = context.units[0]!;
+    const many: Context = {
+      ...context,
+      units: [...Array.from({ length: 5 }, (_, i) => ({ ...unit, id: `src/pricing/f${i}.ts#f`, file: `src/pricing/f${i}.ts`, component: "pricing" })), { ...unit, id: "src/cart/a.ts#f", file: "src/cart/a.ts", component: "cart" }],
+      concerns: [],
+    };
+    const input = { context: many, pr: { fullName: "acme/shop", number: 1, title: "x" }, cut: "technical" as const, plan: selectSections(many, "technical", { open: false }) };
+    const built = buildVisual("changeMap", input);
+    const map = VisualSchema.parse(built.visual) as Extract<Visual, { type: "componentMap" }>;
+    expect(map.data.nodes.map((n) => [n.label, n.files])).toEqual([
+      ["pricing", ["src/pricing/f0.ts", "src/pricing/f1.ts", "src/pricing/f2.ts", "src/pricing/f3.ts"]],
+      ["cart", ["src/cart/a.ts"]],
+    ]);
+    expect(map.data.nodes.every((n) => n.box.h === 72 + 4 * 30)).toBe(true);
+    expect(built.flags).toEqual(["changeMap: kept the first 4 of 5 files in pricing"]);
   });
 });
 
