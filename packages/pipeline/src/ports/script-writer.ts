@@ -9,6 +9,8 @@ export interface SectionBrief {
   visual: Visual;
   /** What the narration may reveal: element ids for `<mark name="…"/>`, with what each shows. */
   elements: { id: string; label: string }[];
+  /** The words the picture shows, by element id, which a writer may put at the cut's level. */
+  labels: { id: string; text: string; max: number }[];
   facts: Fact[];
   wordLimit: number;
 }
@@ -40,10 +42,16 @@ export interface WrittenSentence {
   sources: string[];
 }
 
+/** A whole cut's writing: narration by section, and optionally the picture's words by section and element. */
+export interface CutWriting {
+  sections: Record<string, WrittenSentence[]>;
+  labels?: Record<string, Record<string, string>>;
+}
+
 /** Writes narration (spec-update-structure.md §10): the only step that generates text. */
 export interface ScriptWriter {
   id: string;
   write(request: WriteRequest, signal?: AbortSignal): Promise<WrittenSentence[]>;
   /** Optional: every section of a cut in one go, by section id. A missing section gets nothing. */
-  writeCut?(request: CutRequest, signal?: AbortSignal): Promise<Record<string, WrittenSentence[]>>;
+  writeCut?(request: CutRequest, signal?: AbortSignal): Promise<CutWriting>;
 }

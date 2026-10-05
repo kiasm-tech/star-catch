@@ -1,7 +1,7 @@
 /** A hosted model as the writer: one structured call per cut for the draft, one per section for repairs and fixes. */
 import { z } from "zod";
 import type { Llm } from "../ports/llm.js";
-import type { CutRequest, ScriptWriter, SectionBrief, WriteRequest, WrittenSentence } from "../ports/script-writer.js";
+import type { CutRequest, CutWriting, ScriptWriter, SectionBrief, WriteRequest } from "../ports/script-writer.js";
 
 const RULES = `Rules:
 - Each section answers only its own "purpose". Never repeat what another section says; the reader hears them in order.
@@ -22,7 +22,8 @@ ${RULES}
 export const WRITER_CUT_PROMPT = `You write the narration for every section of a short video that explains a pull request; the same text becomes the article. The sections play in the order given and tell one story. For each, you get its purpose, what its picture shows and the facts it is about. Write only from them.
 
 ${RULES}
-- The first section says what happened in one sentence; the last recaps in one or two sentences and adds nothing new.`;
+- The first section says what happened in one sentence; the last recaps in one or two sentences and adds nothing new.
+- Each section's picture shows words ("words": each element id with its current text, quoted from the PR). Rewrite every one for this cut, as "labels": at most 8 words for a box or an arrow, one short sentence for a card. Business cut: what a customer or product owner would recognise, never code, files, functions or component names. Technical cut: parts and behaviour in words, no code syntax. Keep any number exactly as written. Return each id you were given, once.`;
 
 const SentencesSchema = z.array(z.object({ text: z.string().min(1), sources: z.array(z.string()) }));
 const SENTENCES = {
@@ -42,12 +43,17 @@ export const WRITER_SCHEMA: Record<string, unknown> = {
   additionalProperties: false,
 };
 
+export const LABELS = {
+  type: "array",
+  items: { type: "object", properties: { id: { type: "string" }, label: { type: "string" } }, required: ["id", "label"], additionalProperties: false },
+};
+
 export const WRITER_CUT_SCHEMA: Record<string, unknown> = {
   type: "object",
   properties: {
     sections: {
       type: "array",
-      items: { type: "object", properties: { id: { type: "string" }, sentences: SENTENCES }, required: ["id", "sentences"], additionalProperties: false },
+      items: { type: "object", properties: { id: { type: "string" }, sentences: SENTENCES, labels: LABELS }, required: ["id", "sentences", "labels"], additionalProperties: false },
     },
   },
   required: ["sections"],
@@ -68,7 +74,7 @@ const section = (brief: SectionBrief) => ({
   heading: brief.heading,
   purpose: brief.purpose,
   wordLimit: brief.wordLimit,
-  picture: { type: brief.visual.type, elements: brief.elements },
+  picture: { type: brief.visual.type, elements: brief.elements, words: brief.labels.map((l) => ({ id: l.id, text: l.text })) },
   facts: brief.facts.map((f) => ({ group: f.group, key: f.key, value: f.value, sources: f.sources })),
 });
 
@@ -95,11 +101,13 @@ export function modelWriter(llm: Llm, model: string): ScriptWriter {
       const asked = new Set(request.sections.map((s) => s.id));
       const answers = (typeof raw === "object" && raw !== null && Array.isArray((raw as { sections?: unknown }).sections) ? (raw as { sections: unknown[] }).sections : []);
       if (answers.length === 0) throw new Error("the model's answer didn't match the schema");
-      const written: Record<string, WrittenSentence[]> = {};
+      const written: CutWriting = { sections: {}, labels: {} };
       // Each section on its own: one malformed answer costs that section, not the cut.
       for (const answer of answers) {
-        const parsed = z.object({ id: z.string(), sentences: SentencesSchema }).safeParse(answer);
-        if (parsed.success && asked.has(parsed.data.id)) written[parsed.data.id] = parsed.data.sentences;
+        const parsed = z.object({ id: z.string(), sentences: SentencesSchema, labels: z.array(z.object({ id: z.string(), label: z.string() })).optional() }).safeParse(answer);
+        if (!parsed.success || !asked.has(parsed.data.id)) continue;
+        written.sections[parsed.data.id] = parsed.data.sentences;
+        written.labels![parsed.data.id] = Object.fromEntries((parsed.data.labels ?? []).map((l) => [l.id, l.label]));
       }
       return written;
     },
