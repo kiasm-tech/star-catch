@@ -61,7 +61,7 @@ describe("buildContext with a label cache and a budget", () => {
     expect(await buildContext(snapshot(), { classifier: failing, labelCache })).toEqual(first);
   });
 
-  it("leaves units and sentences unlabelled when the classifier runs out of time, and still groups them", async () => {
+  it("leaves units and sentences unlabelled when the classifier runs out of time, still groups them, and keeps a why", async () => {
     const stuck: Classifier = {
       id: "stuck",
       classify: (_items, signal) => new Promise((_resolve, reject) => signal?.addEventListener("abort", () => reject(signal.reason))),
@@ -70,7 +70,12 @@ describe("buildContext with a label cache and a budget", () => {
     expect(context.units.map((u) => u.labels)).toEqual([undefined, undefined]);
     expect(context.sentences.every((s) => s.class === undefined)).toBe(true);
     expect(context.concerns.map((c) => c.unitIds.length)).toEqual([2]);
-    expect(context.facts.map((f) => f.group)).not.toContain("intent");
+    // The PR's own prose stands in for the why the classifier never found.
+    const why = context.facts.filter((f) => f.group === "intent");
+    expect(why.map((f) => [f.key, f.sources])).toEqual([
+      ["rationale", ["description:0"]],
+      ["rationale", ["description:1"]],
+    ]);
   });
 });
 

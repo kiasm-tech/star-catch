@@ -72,6 +72,12 @@ class Source {
     return [...units].sort((a, b) => (this.rank.get(a.id) ?? 99) - (this.rank.get(b.id) ?? 99) || order.get(a.id)! - order.get(b.id)!);
   }
 
+  /** The sentences behind an intent fact: classed ones, or the fallback that stands in for them. */
+  intent(key: "problem" | "rationale"): Context["sentences"] {
+    const ids = new Set(this.facts.list("intent", key).flatMap((f) => f.sources));
+    return this.context.sentences.filter((x) => ids.has(x.id));
+  }
+
   sentences(cls: string): Context["sentences"] {
     return this.context.sentences.filter((s) => s.class === cls);
   }
@@ -148,15 +154,28 @@ const recap: Builder = (_s, { plan }) => ({
 });
 
 const beforeAfter: Builder = (s, { pr }, flags) => {
-  const after = s.sentences("rationale").length > 0 ? s.sentences("rationale") : s.prose("behaviour");
   const items = (list: Context["sentences"], side: string) =>
     top(list, `${side} sentences`, flags, 3).map((x) => ({ id: `${side}:${x.id}`, text: clip(x.text, 160) }));
-  const now = items(after, "after");
+  const orTitle = (list: ReturnType<typeof items>) => (list.length > 0 ? list : [{ id: "after:title", text: clip(plainTitle(pr.title), 160) }]);
+  const problems = s.intent("problem");
+  if (problems.length === 0) {
+    // No problem stated: the reasons on one side, what it does now on the other.
+    const why = s.intent("rationale");
+    const reasons = new Set(why.map((x) => x.id));
+    return {
+      type: "beforeAfterSplit",
+      data: {
+        before: { label: "Why", items: items(why, "why") },
+        after: { label: "Now", items: orTitle(items(s.prose("behaviour").filter((x) => !reasons.has(x.id)), "after")) },
+      },
+    };
+  }
+  const after = s.intent("rationale").length > 0 ? s.intent("rationale") : s.prose("behaviour");
   return {
     type: "beforeAfterSplit",
     data: {
-      before: { label: "Before", items: items(s.sentences("problem"), "before") },
-      after: { label: "Now", items: now.length > 0 ? now : [{ id: "after:title", text: clip(plainTitle(pr.title), 160) }] },
+      before: { label: "Before", items: items(problems, "before") },
+      after: { label: "Now", items: orTitle(items(after, "after")) },
     },
   };
 };

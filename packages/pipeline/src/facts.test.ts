@@ -1,6 +1,6 @@
 import { FACT_GROUPS, type ChangeUnit, type Kind, type Risk, type Sentence, type Visibility } from "@kiasm-tech/star-catch-contracts";
 import { describe, expect, it } from "vitest";
-import { factsOf } from "./facts.js";
+import { factsOf, whyFallback } from "./facts.js";
 
 type Fields = Partial<ChangeUnit> & { kind?: Kind; visibility?: Visibility; risks?: Risk[] };
 
@@ -171,5 +171,56 @@ describe("factsOf", () => {
   it("says nothing about unchanged units, and leaves test units out of the shape", () => {
     const units = [unit("same", { verdict: "notAChange", labels: undefined }), unit("t", { kind: "test", changeType: "added" })];
     expect(keyed({ units }).map(([k]) => k)).toEqual(["shape.components", "quality.tests"]);
+  });
+});
+
+describe("whyFallback", () => {
+  const sentence = (id: string, text: string, cls?: Sentence["class"]): Sentence => ({
+    id,
+    origin: id.startsWith("commit") ? (`commit:${"a".repeat(40)}` as Sentence["origin"]) : "description",
+    text,
+    ...(cls && { class: cls }),
+    numbers: [],
+  });
+  const ids = (list: Sentence[]) => list.map((s) => s.id);
+
+  it("takes the unlabelled prose first, skipping headings and labels", () => {
+    const sentences = [
+      sentence("description:0", "Why"),
+      sentence("description:1", "Marketing wants to start a monthly newsletter."),
+      sentence("description:2", "What changed:"),
+      sentence("description:3", "The form stores the address as pending.", "behaviour"),
+    ];
+    expect(ids(whyFallback(sentences))).toEqual(["description:1"]);
+  });
+
+  it("keeps to the first paragraph: a heading ends it", () => {
+    const sentences = [
+      sentence("description:0", "Marketing wants to start a monthly newsletter."),
+      sentence("description:1", "We may only email people who confirmed their address."),
+      sentence("description:2", "What changed"),
+      sentence("description:3", "A sign-up form on the home page."),
+    ];
+    expect(ids(whyFallback(sentences))).toEqual(["description:0", "description:1"]);
+  });
+
+  it("falls back to behaviour, then to anything that isn't noise or an instruction", () => {
+    expect(ids(whyFallback([sentence("description:0", "Run the migration before deploying.", "instruction"), sentence("description:1", "The form stores the address as pending.", "behaviour")]))).toEqual([
+      "description:1",
+    ]);
+    expect(ids(whyFallback([sentence("description:0", "Thanks to everyone who reviewed this.", "noise")]))).toEqual([]);
+  });
+
+  it("uses a commit subject only when the description has nothing", () => {
+    const commit = sentence("commit:0", "Add a newsletter sign-up with double opt-in");
+    expect(ids(whyFallback([commit]))).toEqual(["commit:0"]);
+    expect(ids(whyFallback([commit, sentence("description:0", "Sign-ups now need a confirmed address.", "behaviour")]))).toEqual(["description:0"]);
+  });
+
+  it("stands in for the intent only when nothing is classed as a problem or a rationale", () => {
+    const classed = factsOf({ units: [], links: [], entryPoints: [], concerns: [], sentences: [sentence("description:0", "Customers kept asking for a newsletter.", "problem"), sentence("description:1", "Marketing wants to start a monthly newsletter.")] });
+    expect(classed.filter((f) => f.group === "intent").map((f) => [f.key, f.sources])).toEqual([["problem", ["description:0"]]]);
+    const unlabelled = factsOf({ units: [], links: [], entryPoints: [], concerns: [], sentences: [sentence("description:1", "Marketing wants to start a monthly newsletter.")] });
+    expect(unlabelled.filter((f) => f.group === "intent").map((f) => [f.key, f.sources])).toEqual([["rationale", ["description:1"]]]);
   });
 });
