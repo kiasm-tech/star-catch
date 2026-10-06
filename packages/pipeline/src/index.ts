@@ -45,6 +45,7 @@ export { modelWriter, WRITER_CUT_PROMPT, WRITER_PROMPT, WRITER_PROMPT_ID } from 
 export { checkSection, type CheckInput, type Checked } from "./script/checks.js";
 export { generateScripts, type ScriptOptions, type Scripts } from "./script/generate.js";
 export { buildScripts, type ScriptPorts } from "./usecases/build-scripts.js";
+export { buildCatch } from "./usecases/build-catch.js";
 export { revealable, elementIds } from "./visuals/elements.js";
 export { buildVisual, changedCondition, outcomesOf, type Built, type PrInfo, type VisualInput } from "./visuals/build.js";
 export { buildContext, type ContextOptions, type ContextPorts } from "./usecases/build-context.js";
