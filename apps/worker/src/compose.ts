@@ -3,7 +3,9 @@ import {
   AnthropicLlm,
   FileFixtureStore,
   GitHubApp,
+  GitHubAppPullRequestComments,
   GitHubAppPullRequestSource,
+  MemoryPullRequestComments,
   OpenAiLlm,
   PgBossJobQueue,
   PostgresCatchStore,
@@ -21,6 +23,7 @@ import {
   modelClassifier,
   modelWriter,
   templateWriter,
+  type CommentDeps,
   type GenerateDeps,
   type IngestDeps,
   type JobQueue,
@@ -35,8 +38,12 @@ export interface Worker {
   queue: JobQueue;
   ingest: IngestDeps;
   generate: GenerateDeps;
+  /** Null when CRUX_PUBLIC_URL is unset: there's no page to link to, so no comment. */
+  comment: CommentDeps | null;
   stop(): Promise<void>;
 }
+
+const MOCK_CRUX_URL = "http://localhost:3000";
 
 const DEFAULT_FIXTURES_DIR = fileURLToPath(new URL("../../../fixtures/", import.meta.url));
 
@@ -70,19 +77,33 @@ function classifyBudgetMs(env: Env): number {
 export async function compose(env: Env): Promise<Worker> {
   if (!env.DATABASE_URL) throw new Error("Missing env vars: DATABASE_URL");
   // Built before connecting, so missing App credentials fail the start, not the first job.
-  const source = isMock("github", env)
-    ? new RecordedPullRequestSource(new FileFixtureStore(env.STAR_CATCH_FIXTURES_DIR ?? DEFAULT_FIXTURES_DIR))
-    : new GitHubAppPullRequestSource(new GitHubApp(appCredentials(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY)));
+  const mockGitHub = isMock("github", env);
+  const app = mockGitHub ? null : new GitHubApp(appCredentials(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY));
+  const source = app
+    ? new GitHubAppPullRequestSource(app)
+    : new RecordedPullRequestSource(new FileFixtureStore(env.STAR_CATCH_FIXTURES_DIR ?? DEFAULT_FIXTURES_DIR));
+  const comments = app ? new GitHubAppPullRequestComments(app) : new MemoryPullRequestComments();
+  const cruxUrl = env.CRUX_PUBLIC_URL ?? (mockGitHub ? MOCK_CRUX_URL : undefined);
   const ports = modelPorts(env);
 
   const db = connect(env.DATABASE_URL);
   const queue = await PgBossJobQueue.start(env.DATABASE_URL, QUEUES);
   const settings = new PostgresRepoSettings(db, env.STAR_CATCH_REPOS);
   const snapshots = new PostgresSnapshotStore(db);
+  const catches = new PostgresCatchStore(db);
   return {
     queue,
     ingest: { settings, snapshots, source, queue },
-    generate: { settings, snapshots, catches: new PostgresCatchStore(db), runs: new PostgresRunLog(db), ports, options: { budgetMs: classifyBudgetMs(env) } },
+    generate: {
+      settings,
+      snapshots,
+      catches,
+      runs: new PostgresRunLog(db),
+      ports,
+      options: { budgetMs: classifyBudgetMs(env) },
+      ...(cruxUrl && { commentQueue: queue }),
+    },
+    comment: cruxUrl ? { settings, catches, comments, cruxUrl } : null,
     async stop() {
       await queue.stop();
       await db.destroy();

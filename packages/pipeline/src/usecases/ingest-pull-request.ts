@@ -32,7 +32,7 @@ export async function ingestPullRequest({ settings, snapshots, source, queue }: 
 
   const snapshot = await source.snapshot({ fullName: job.fullName, number: job.number, installationId: job.installationId });
   await snapshots.save(snapshot);
-  const generate: GenerateJob = { fullName: job.fullName, number: job.number, headSha: snapshot.headSha };
+  const generate: GenerateJob = { fullName: job.fullName, number: job.number, headSha: snapshot.headSha, installationId: job.installationId };
   await queue.send(GENERATE_QUEUE.name, generate, { singletonKey: ingestKey(generate) });
   return "stored";
 }

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { connect, migrate, PostgresCatchStore, PostgresSnapshotStore, sign, type StarCatchDb } from "@star-catch/adapters";
+import { connect, migrate, PostgresCatchStore, PostgresSnapshotStore, sign, type MemoryPullRequestComments, type StarCatchDb } from "@star-catch/adapters";
 import { FIXTURES_DIR, freshDatabase, loadRecordedSnapshots, type TestDatabase } from "@star-catch/testkit";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compose as composeIntake, type Intake } from "../apps/intake/src/compose.js";
@@ -50,11 +50,14 @@ async function replay(deliveryId: string, fixture: string) {
 }
 
 describe("a pull request from webhook to catch", () => {
-  it("stores the snapshot of a replayed webhook, once, and its catch", async () => {
+  it("stores the snapshot of a replayed webhook, once, its catch, and the comment on the PR", async () => {
     expect(await replay("d-1", "pmndrs__zustand__3469.opened.json")).toMatchObject({ outcome: "queued" });
     expect(await replay("d-1", "pmndrs__zustand__3469.opened.json")).toEqual({ outcome: "duplicate" });
-    // The ingest, then the catch it queues.
-    expect(await runWorker(worker, { watch: false, log: quiet })).toBe(2);
+    // The ingest, the catch it queues, then the comment.
+    expect(await runWorker(worker, { watch: false, log: quiet })).toBe(3);
+    expect((worker.comment!.comments as MemoryPullRequestComments).comments).toEqual([
+      expect.objectContaining({ fullName: "pmndrs/zustand", number: 3469 }),
+    ]);
 
     const recorded = loadRecordedSnapshots().find((s) => s.number === 3469)!;
     expect(await new PostgresSnapshotStore(db).find("pmndrs/zustand", recorded.headSha)).toEqual(recorded);

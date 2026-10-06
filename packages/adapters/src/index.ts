@@ -10,6 +10,8 @@ export { PostgresCatchStore, PostgresRunLog } from "./db/catch-store.postgres.js
 export { PgBossJobQueue } from "./queue/job-queue.pgboss.js";
 export { GitHubApp, appCredentials, type GitHubAppCredentials } from "./github/github-app.js";
 export { GitHubAppPullRequestSource } from "./github/pull-request-source.app.js";
+export { GitHubAppPullRequestComments } from "./github/pull-request-comments.app.js";
+export { MemoryPullRequestComments, type StoredComment } from "./github/pull-request-comments.mock.js";
 export { EnvRepoSettings } from "./settings/repo-settings.env.js";
 export { PostgresRepoSettings } from "./settings/repo-settings.postgres.js";
 export { sign, verifySignature } from "./github/webhook-signature.js";

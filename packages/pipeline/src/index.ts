@@ -4,7 +4,10 @@ export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
 export type { RepoSettings, RepoSettingsStore } from "./ports/repo-settings.js";
 export type { CatchStore, RunLog, RunStatus, StoredVersion } from "./ports/catch-store.js";
+export type { CommentWrite, PullRequestComments } from "./ports/pull-request-comments.js";
 export {
+  COMMENT_QUEUE,
+  CommentJobSchema,
   CRUX_GITHUB_EVENT_QUEUE,
   GENERATE_QUEUE,
   GenerateJobSchema,
@@ -12,6 +15,7 @@ export {
   IngestJobSchema,
   QUEUES,
   ingestKey,
+  type CommentJob,
   type GenerateJob,
   type IngestJob,
 } from "./jobs/queues.js";
@@ -51,6 +55,8 @@ export { generateScripts, type ScriptOptions, type Scripts } from "./script/gene
 export { buildScripts, type ScriptPorts } from "./usecases/build-scripts.js";
 export { buildCatch } from "./usecases/build-catch.js";
 export { generateCatch, type GenerateDeps, type GenerateOutcome } from "./usecases/generate-catch.js";
+export { commentOnPullRequest, type CommentDeps, type CommentOutcome } from "./usecases/comment-on-pull-request.js";
+export { COMMENT_MARKER, commentBody, videoSeconds, type CommentLinks } from "./comment/body.js";
 export { revealable, elementIds } from "./visuals/elements.js";
 export { buildVisual, changedCondition, outcomesOf, type Built, type PrInfo, type VisualInput } from "./visuals/build.js";
 export { buildContext, type ContextOptions, type ContextPorts } from "./usecases/build-context.js";

@@ -1,5 +1,5 @@
-import { connect, migrate, type StarCatchDb } from "@star-catch/adapters";
-import { GENERATE_QUEUE, INGEST_QUEUE, ingestKey, type IngestJob } from "@star-catch/pipeline";
+import { connect, migrate, type MemoryPullRequestComments, type StarCatchDb } from "@star-catch/adapters";
+import { COMMENT_MARKER, COMMENT_QUEUE, GENERATE_QUEUE, INGEST_QUEUE, ingestKey, type IngestJob } from "@star-catch/pipeline";
 import { freshDatabase, type TestDatabase } from "@star-catch/testkit";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compose, type Worker } from "./compose.js";
@@ -37,17 +37,23 @@ afterAll(async () => {
 const send = (job: IngestJob) => worker.queue.send(INGEST_QUEUE.name, job, { singletonKey: ingestKey(job) });
 
 describe("runWorker", () => {
-  it("drains the ingest queue into snapshots, then the snapshots into catches, and stops", async () => {
+  it("drains the ingest queue into snapshots, the snapshots into catches, the catches into a PR comment, and stops", async () => {
     logs = [];
     await send(recorded);
     await send({ ...recorded, deliveryId: "d-2", fullName: "acme/elsewhere", headSha: "b".repeat(40) });
 
-    expect(await runWorker(worker, { watch: false, log })).toBe(3);
+    expect(await runWorker(worker, { watch: false, log })).toBe(4);
     expect(logs).toEqual([
       { queue: INGEST_QUEUE.name, deliveryId: "d-1", outcome: "stored" },
       { queue: INGEST_QUEUE.name, deliveryId: "d-2", outcome: "repo-disabled" },
       { queue: GENERATE_QUEUE.name, pr: "pmndrs/zustand@30ad99f", outcome: "generated" },
+      { queue: COMMENT_QUEUE.name, pr: "pmndrs/zustand@30ad99f", outcome: "created" },
     ]);
+    const { comments } = worker.comment!.comments as MemoryPullRequestComments;
+    expect(comments).toEqual([
+      { fullName: "pmndrs/zustand", number: 3469, body: expect.stringContaining("http://localhost:3000/star-catch/pmndrs__zustand__3469?cut=technical") },
+    ]);
+    expect(comments[0]!.body.startsWith(COMMENT_MARKER)).toBe(true);
     const rows = await db.selectFrom("star_catch.pr_snapshots").select(["repo", "head_sha", "pr_number"]).execute();
     expect(rows).toEqual([{ repo: "pmndrs/zustand", head_sha: recorded.headSha, pr_number: 3469 }]);
     const catches = await db.selectFrom("star_catch.catch_versions").select(["catch_id", "head_sha"]).execute();
@@ -73,9 +79,12 @@ describe("runWorker", () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     await send({ ...recorded, deliveryId: "d-4", headSha: "d".repeat(40) });
     // Its snapshot is the recorded one, already stored: the catch is built again, not the snapshot.
-    await expect.poll(() => logs.length, { timeout: 10_000 }).toBe(2);
+    await expect.poll(() => logs.length, { timeout: 10_000 }).toBe(3);
     stopping.abort();
-    expect(await running).toBe(2);
+    expect(await running).toBe(3);
+    // The same catch again: the comment is left as it is, not posted twice.
+    expect(logs[2]).toEqual({ queue: COMMENT_QUEUE.name, pr: "pmndrs/zustand@30ad99f", outcome: "unchanged" });
+    expect((worker.comment!.comments as MemoryPullRequestComments).comments).toHaveLength(1);
   });
 });
 
