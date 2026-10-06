@@ -18,6 +18,7 @@ const ALLOWED: Record<string, string[]> = {
   [CHANGES]: [CONTRACTS],
   [PIPELINE]: [CONTRACTS, CHANGES],
   [ADAPTERS]: [CONTRACTS, PIPELINE, CHANGES],
+  "@star-catch/api": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/cli": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/intake": [CONTRACTS, PIPELINE, ADAPTERS],
   "@star-catch/worker": [CONTRACTS, PIPELINE, ADAPTERS],

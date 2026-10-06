@@ -22,7 +22,8 @@ GITHUB_TOKEN=… pnpm cli record pmndrs/zustand 3469         # record a public P
 docker compose up -d --wait                               # local Postgres
 DATABASE_URL=postgres://star_catch:star_catch@localhost:5432/star_catch pnpm cli migrate
 DATABASE_URL=… GITHUB_WEBHOOK_SECRET=dev pnpm intake           # webhook receiver on :8080
-DATABASE_URL=… STAR_CATCH_REPOS=pmndrs/zustand STAR_CATCH_MOCK_GITHUB=true pnpm worker --watch
+DATABASE_URL=… STAR_CATCH_REPOS=pmndrs/zustand STAR_CATCH_MOCK_GITHUB=true STAR_CATCH_MOCK_LLM=true pnpm worker --watch
+DATABASE_URL=… STAR_CATCH_API_TOKEN=dev PORT=8081 pnpm api   # what Crux reads, on :8081
 GITHUB_WEBHOOK_SECRET=dev pnpm replay fixtures/webhooks/pmndrs__zustand__3469.opened.json
 ```
 
@@ -30,7 +31,12 @@ Node 22.12 or later. Tests need Docker running: they start their own Postgres
 (`STAR_CATCH_TEST_DATABASE_URL` points them at an existing server instead).
 
 The real classifier needs `STAR_CATCH_CLASSIFIER_MODEL` and `ANTHROPIC_API_KEY`, or `OPENAI_API_KEY`
-(with `OPENAI_BASE_URL` for Azure AI Foundry); its labels are cached in `.cache/labels.json`.
+(with `OPENAI_BASE_URL` for Azure AI Foundry); its labels are cached in `.cache/labels.json`. The
+narration writer uses `STAR_CATCH_WRITER_MODEL`, or the classifier's model when unset.
+
+The worker snapshots each PR on an enabled repo, then builds its catch with both models (offline
+with `STAR_CATCH_MOCK_LLM=true`). A repo is enabled in `star_catch.repo_settings`, as Crux sets it,
+or by `STAR_CATCH_REPOS` (comma-separated, always on).
 
 Dependency rules: [test/architecture.test.ts](test/architecture.test.ts), mirrored in ESLint.
 

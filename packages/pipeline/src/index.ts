@@ -2,13 +2,17 @@ export type { PullRequestRef, PullRequestSource } from "./ports/pull-request-sou
 export type { DeliveryStatus, DeliveryStore, WebhookDelivery } from "./ports/delivery-store.js";
 export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
-export type { RepoSettings } from "./ports/repo-settings.js";
+export type { RepoSettings, RepoSettingsStore } from "./ports/repo-settings.js";
+export type { CatchStore, RunLog, RunStatus, StoredVersion } from "./ports/catch-store.js";
 export {
   CRUX_GITHUB_EVENT_QUEUE,
+  GENERATE_QUEUE,
+  GenerateJobSchema,
   INGEST_QUEUE,
   IngestJobSchema,
   QUEUES,
   ingestKey,
+  type GenerateJob,
   type IngestJob,
 } from "./jobs/queues.js";
 export type {
@@ -46,6 +50,7 @@ export { checkSection, type CheckInput, type Checked } from "./script/checks.js"
 export { generateScripts, type ScriptOptions, type Scripts } from "./script/generate.js";
 export { buildScripts, type ScriptPorts } from "./usecases/build-scripts.js";
 export { buildCatch } from "./usecases/build-catch.js";
+export { generateCatch, type GenerateDeps, type GenerateOutcome } from "./usecases/generate-catch.js";
 export { revealable, elementIds } from "./visuals/elements.js";
 export { buildVisual, changedCondition, outcomesOf, type Built, type PrInfo, type VisualInput } from "./visuals/build.js";
 export { buildContext, type ContextOptions, type ContextPorts } from "./usecases/build-context.js";

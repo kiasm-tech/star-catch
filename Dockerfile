@@ -1,4 +1,4 @@
-# One image for the backend: <image> intake | worker [--watch] | migrate
+# One image for the backend: <image> api | intake | worker [--watch] | migrate
 FROM node:22-alpine AS base
 WORKDIR /app
 RUN corepack enable

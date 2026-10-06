@@ -38,23 +38,26 @@ function setUp(enabled = ["acme/shop"]) {
     settings: { isEnabled: async (fullName: string) => enabled.includes(fullName.toLowerCase()) },
     snapshots,
     source: { snapshot },
+    queue: { send: vi.fn(async () => true) },
   };
-  return { deps, snapshots, snapshot };
+  return { deps, snapshots, snapshot, send: deps.queue.send };
 }
 
 describe("ingestPullRequest", () => {
-  it("snapshots through the job's installation and stores the result", async () => {
-    const { deps, snapshots, snapshot } = setUp();
+  it("snapshots through the job's installation, stores the result and queues its catch", async () => {
+    const { deps, snapshots, snapshot, send } = setUp();
     expect(await ingestPullRequest(deps, job())).toBe("stored");
     expect(snapshot).toHaveBeenCalledWith({ fullName: "acme/shop", number: 7, installationId: 42 });
     expect(snapshots.saved).toHaveLength(1);
+    expect(send).toHaveBeenCalledWith("star-catch.generate", { fullName: "acme/shop", number: 7, headSha: HEAD }, { singletonKey: `acme/shop@${HEAD}` });
   });
 
   it("snapshots a head commit once", async () => {
-    const { deps, snapshot } = setUp();
+    const { deps, snapshot, send } = setUp();
     await ingestPullRequest(deps, job());
     expect(await ingestPullRequest(deps, job({ deliveryId: "d-2" }))).toBe("duplicate");
     expect(snapshot).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -64,9 +67,10 @@ describe("ingestPullRequest", () => {
     ["bot", job({ author: { login: "renovate[bot]", type: "User" } })],
     ["invalid", { deliveryId: "d-1" }],
   ])("skips with %s", async (outcome, data) => {
-    const { deps, snapshot, snapshots } = setUp();
+    const { deps, snapshot, snapshots, send } = setUp();
     expect(await ingestPullRequest(deps, data)).toBe(outcome);
     expect(snapshot).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
     expect(snapshots.saved).toEqual([]);
   });
 
