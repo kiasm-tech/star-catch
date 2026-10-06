@@ -82,6 +82,17 @@ describe("buildVisual", () => {
     expect((await visualOf("11-python-condition", "technical", "rule")).visual.data).toMatchObject({ after: { condition: "subtotal >= 40" } });
   });
 
+  it("puts the reasons beside what it does now when a PR names no problem", async () => {
+    const { visual } = await visualOf("06-config-key", "technical", "problem");
+    expect(visual).toMatchObject({
+      type: "beforeAfterSplit",
+      data: {
+        before: { label: "Why", items: [{ text: expect.stringContaining("rolled out gradually") }] },
+        after: { label: "Now", items: [expect.anything()] },
+      },
+    });
+  });
+
   it("draws a new column as a field added to its entity", async () => {
     expect((await visualOf("07-migration", "technical", "dataChange")).visual.data).toEqual({
       entities: [{ id: "entity:orders", label: "orders", change: "changed", fields: [{ id: "field:orders.gift_note", name: "gift_note", change: "added" }] }],

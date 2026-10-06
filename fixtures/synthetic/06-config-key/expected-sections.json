@@ -3,6 +3,7 @@
     "gate": "full",
     "sections": [
       "title",
+      "problem",
       "changeMap",
       "structureChange",
       "risksRollout",

@@ -31,7 +31,7 @@ const ruleChanged = (f: FactIndex) => f.has("rules", "conditionChanged");
 /** The one question each section answers (§5 chapters, §6–§7 rows): the writer says that and nothing else. */
 export const SECTION_PURPOSES: Record<SectionId | DraftSectionId, string> = {
   title: "In one sentence, what happened.",
-  problem: "What was wrong before, then what is different now. Nothing about how.",
+  problem: "Why this change: what was wrong or missing before, then what is different now. Nothing about how.",
   changeMap: "Which parts of the system changed. Name them; no reasons.",
   structureChange: "What was added or removed, and what now connects to it.",
   contractChange: "What callers send or get back now that they didn't before.",
@@ -89,7 +89,7 @@ export const SECTION_FACTS: Record<SectionId | DraftSectionId, string[]> = {
 /** Section headings in the article, as named in §6–§7. */
 export const SECTION_TITLES: Record<SectionId | DraftSectionId, string> = {
   title: "Title & summary",
-  problem: "The problem",
+  problem: "Why it changed",
   changeMap: "Change map",
   structureChange: "Structure change",
   contractChange: "Contract change",
@@ -117,7 +117,7 @@ export const SECTION_TITLES: Record<SectionId | DraftSectionId, string> = {
 
 export const SECTION_RULES: SectionRule[] = [
   { id: "title", cut: "technical", chapter: "opening", include: "always", visual: "titleCard", estSeconds: 10 },
-  { id: "problem", cut: "technical", chapter: "why", include: "whenRelevant", precondition: (f) => f.has("intent", "problem"), visual: "beforeAfterSplit", estSeconds: 20 },
+  { id: "problem", cut: "technical", chapter: "why", include: "whenRelevant", precondition: (f) => f.has("intent"), visual: "beforeAfterSplit", estSeconds: 20 },
   { id: "changeMap", cut: "technical", chapter: "whatChanged", include: "always", precondition: (f) => f.has("shape", "components"), visual: "componentMap", estSeconds: 20 },
   { id: "structureChange", cut: "technical", chapter: "whatChanged", include: "whenRelevant", precondition: (f) => f.has("shape", "added") || f.has("shape", "removed"), visual: "architectureMorph", estSeconds: 25 },
   { id: "contractChange", cut: "technical", chapter: "whatChanged", include: "whenRelevant", precondition: (f) => f.has("contracts", "changed"), visual: "contractCard", estSeconds: 25 },

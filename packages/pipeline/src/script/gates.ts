@@ -1,5 +1,6 @@
 /** Gates (spec-update-structure.md §3): does this cut get an update, and in which form? */
 import type { ChangeUnit, Context, Cut, Gate, GateResult } from "@kiasm-tech/star-catch-contracts";
+import { whyFallback } from "../facts.js";
 import { FactIndex } from "./facts-index.js";
 
 const SECRET_TEXT = [
@@ -28,7 +29,9 @@ export function gatesOf(context: Context, cut: Cut): GateResult {
   const failed: Gate[] = [];
   if (context.truncated) failed.push("readable");
   if (changed.length === 0) failed.push("meaningful");
-  if (!context.sentences.some((s) => s.class === "problem" || s.class === "rationale")) failed.push("explainable");
+  // Any prose stands in for a why the classifier didn't find, so this fails only for a PR with no words.
+  const why = context.sentences.some((s) => s.class === "problem" || s.class === "rationale") || whyFallback(context.sentences).length > 0;
+  if (!why) failed.push("explainable");
   if (changed.length > 0 && changed.every(isUnsafe)) failed.push("safe");
   if (cut === "business") {
     const visible = changed.some((u) => u.labels?.visibility === "user" || u.labels?.visibility === "apiConsumer");

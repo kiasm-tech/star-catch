@@ -58,6 +58,14 @@ function modelPorts(env: Env): ScriptPorts {
   return { classifier: modelClassifier(llmFor(env, classifierModel), classifierModel), writer: modelWriter(llmFor(env, writerModel), writerModel) };
 }
 
+/** The classifier's time for one PR. A job, not a request, so it can wait: past it, changes go unlabelled. */
+const CLASSIFY_BUDGET_MS = 120_000;
+
+function classifyBudgetMs(env: Env): number {
+  const ms = Number(env.STAR_CATCH_CLASSIFY_MS);
+  return Number.isFinite(ms) && ms > 0 ? ms : CLASSIFY_BUDGET_MS;
+}
+
 /** The composition root: the only place that reads env and picks adapters. */
 export async function compose(env: Env): Promise<Worker> {
   if (!env.DATABASE_URL) throw new Error("Missing env vars: DATABASE_URL");
@@ -74,7 +82,7 @@ export async function compose(env: Env): Promise<Worker> {
   return {
     queue,
     ingest: { settings, snapshots, source, queue },
-    generate: { settings, snapshots, catches: new PostgresCatchStore(db), runs: new PostgresRunLog(db), ports },
+    generate: { settings, snapshots, catches: new PostgresCatchStore(db), runs: new PostgresRunLog(db), ports, options: { budgetMs: classifyBudgetMs(env) } },
     async stop() {
       await queue.stop();
       await db.destroy();

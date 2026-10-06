@@ -24,6 +24,41 @@ const unique = (values: string[]) => [...new Set(values)];
 /** `UPDATE …` in a migration: data moves, but no entity changes shape. */
 const DATA_ONLY = /^\s*(insert|update|delete)\b/i;
 
+/** A heading, a label or a fragment: under four words, or ending in a colon. */
+const isFragment = (s: Sentence) => s.text.trim().split(/\s+/).length < 4 || /:\s*$/.test(s.text);
+
+/** How many sentences stand in for the why. */
+const WHY_FALLBACK = 3;
+
+/**
+ * Why the change was made when no sentence is classed as a problem or a rationale (the classifier
+ * ran out of time, or the PR never says why): the best prose there is, so a PR with any words
+ * always has a why. Unlabelled sentences first, then behaviour, then anything that isn't noise or
+ * an instruction; the description and issues before commit subjects.
+ */
+export function whyFallback(sentences: Sentence[]): Sentence[] {
+  const tiers: ((s: Sentence) => boolean)[] = [
+    (s) => s.class === undefined,
+    (s) => s.class === "behaviour",
+    (s) => s.class !== "noise" && s.class !== "instruction",
+  ];
+  for (const fromCommits of [false, true]) {
+    for (const fits of tiers) {
+      const ok = (s: Sentence) => !isFragment(s) && fits(s) && s.origin.startsWith("commit:") === fromCommits;
+      const start = sentences.findIndex(ok);
+      if (start < 0) continue;
+      // The first run only: a heading or another kind of sentence ends the paragraph that says why.
+      const run: Sentence[] = [];
+      for (const s of sentences.slice(start)) {
+        if (!ok(s) || run.length === WHY_FALLBACK) break;
+        run.push(s);
+      }
+      return run;
+    }
+  }
+  return [];
+}
+
 /**
  * In a fixed order: groups as in FACT_GROUPS, keys as below, then units and sentences in context
  * order (callers by the rank of the concern they call into). A key with nothing to say is left out.
@@ -49,8 +84,10 @@ export function factsOf({ units, links, entryPoints, concerns, sentences }: Fact
   };
   const classed = (c: Sentence["class"]) => sentences.filter((s) => s.class === c);
 
-  quote("intent", "problem", classed("problem"));
-  quote("intent", "rationale", classed("rationale"));
+  const problems = classed("problem");
+  const rationales = classed("rationale");
+  quote("intent", "problem", problems);
+  quote("intent", "rationale", problems.length + rationales.length > 0 ? rationales : whyFallback(sentences));
 
   const placed = changed.filter((u) => u.component !== "");
   if (placed.length) {

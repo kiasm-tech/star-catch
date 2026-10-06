@@ -1,8 +1,9 @@
 {
   "technical": {
-    "gate": "articleOnly",
+    "gate": "full",
     "sections": [
       "title",
+      "problem",
       "changeMap",
       "risksRollout",
       "wrap"
@@ -12,7 +13,7 @@
     ]
   },
   "business": {
-    "gate": "articleOnly",
+    "gate": "full",
     "sections": [
       "headline",
       "whatsNew",
