@@ -9,6 +9,8 @@ import { CHAPTERS, CUTS } from "./script.js";
 export const CANVAS = { width: 1000, height: 562 } as const;
 /** About seven elements per diagram (§8); more and it's split or trimmed by rank. */
 export const MAX_PRIMARY = 7;
+/** Changed files listed under a component: enough to place the change, few enough to read. */
+export const MAX_FILES = 4;
 
 const id = z.string().min(1);
 const label = z.string().min(1).max(80);
@@ -29,10 +31,26 @@ export const TitleCardSchema = z.object({
 const SplitSide = z.object({ label, items: z.array(z.object({ id, text: sentence })).max(3) });
 export const BeforeAfterSplitSchema = z.object({ before: SplitSide, after: SplitSide });
 
-/** Boxes are components; `changed` ones are lit, `focus` marks the draft appendix's top concerns. */
+/** One change inside a component, for a map with a single component: the box opens to show what moved. */
+const ComponentChange = z.object({ file: z.string().min(1).max(200), name: label, change: z.enum(["added", "removed", "changed", "renamed", "moved"]) });
+
+/**
+ * Boxes are components; `changed` ones are lit, `focus` marks the draft appendix's top concerns,
+ * `files` are the changed files in it (repo paths), `changes` what changed in them when it's the only one.
+ */
 export const ComponentMapSchema = z
   .object({
-    nodes: z.array(z.object({ id, label, box: Box, changed: z.boolean(), focus: z.boolean().optional() })),
+    nodes: z.array(
+      z.object({
+        id,
+        label,
+        box: Box,
+        changed: z.boolean(),
+        focus: z.boolean().optional(),
+        files: z.array(z.string().min(1).max(200)).max(MAX_FILES).optional(),
+        changes: z.array(ComponentChange).max(MAX_PRIMARY).optional(),
+      }),
+    ),
     edges: z.array(Edge),
   })
   .refine(...atMost((d: { nodes: unknown[] }) => d.nodes.length, "components"));

@@ -26,6 +26,20 @@ export function rows(count: number, h = 72): Box[] {
   });
 }
 
+/** Groups laid out on their own, stacked top to bottom with a row's gap between them, centred as a whole. */
+export function stack(groups: Box[][]): Box[][] {
+  const extent = (group: Box[]) => ({ top: Math.min(...group.map((b) => b.y)), bottom: Math.max(...group.map((b) => b.y + b.h)) });
+  const kept = groups.filter((g) => g.length > 0);
+  const heights = kept.map((g) => extent(g).bottom - extent(g).top);
+  let y = (CANVAS.height - (heights.reduce((a, b) => a + b, 0) + GAP * 2 * (kept.length - 1))) / 2;
+  return groups.map((group) => {
+    if (group.length === 0) return group;
+    const dy = y - extent(group).top;
+    y += extent(group).bottom - extent(group).top + GAP * 2;
+    return group.map((b) => ({ ...b, y: round(b.y + dy) }));
+  });
+}
+
 /** Lifeline positions for `count` participants, evenly spread. */
 export function lanes(count: number): number[] {
   const step = (CANVAS.width - 2 * MARGIN) / Math.max(count, 1);

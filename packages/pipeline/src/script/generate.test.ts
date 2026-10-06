@@ -7,9 +7,9 @@ import type { ScriptWriter, WrittenSentence } from "../ports/script-writer.js";
 import { buildContext } from "../usecases/build-context.js";
 import { buildScripts } from "../usecases/build-scripts.js";
 import { elementIds } from "../visuals/elements.js";
-import { checkSection } from "./checks.js";
+import { checkSection, labelProblem } from "./checks.js";
 import { generateScripts } from "./generate.js";
-import { modelWriter, WRITER_CUT_PROMPT } from "./model-writer.js";
+import { modelWriter, WRITER_CUT_PROMPT, WRITER_PROMPT } from "./model-writer.js";
 import { deCode, templateWriter } from "./template-writer.js";
 
 const fixtures = loadSyntheticFixtures();
@@ -142,8 +142,9 @@ describe("writers", () => {
     };
     const scripts = await scriptsOf(snapshotOf("05-condition-change"), failing);
     expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "the writer failed: timeout" });
-    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
-    expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length);
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "written by the template: the writer left it empty" });
+    // Every section once, and the failed one a second time.
+    expect(calls).toBe(sectionsOf(scripts.technical!).length + scripts.technical!.draft.length + sectionsOf(scripts.business!).length + 1);
   });
 
   it("asks the model once per cut, each section with its purpose and only its facts, in de-coded words", async () => {
@@ -165,7 +166,8 @@ describe("writers", () => {
     const snapshot = snapshotOf("05-condition-change");
     const context = await buildContext(snapshot, { classifier: mockClassifier });
     const scripts = await generateScripts(context, { fullName: snapshot.fullName, number: snapshot.number, title: snapshot.title }, { writer, open: false });
-    expect(requests.map((r) => r.system)).toEqual([WRITER_CUT_PROMPT, WRITER_CUT_PROMPT]);
+    // One call per cut, and one more for the section whose answer was unusable.
+    expect(requests.map((r) => r.system)).toEqual([WRITER_CUT_PROMPT, WRITER_PROMPT, WRITER_CUT_PROMPT]);
     const technical = JSON.parse(requests[0]!.user) as { cut: string; sections: { id: string; purpose: string; facts: { group: string }[] }[] };
     expect(technical.cut).toBe("technical");
     expect(technical.sections.map((x) => x.id)).toEqual(sectionsOf(scripts.technical!).map((x) => x.id));
@@ -175,18 +177,46 @@ describe("writers", () => {
     // Source ids keep their names (they're references), but nothing the model reads as words does.
     const read = JSON.parse(requests[0]!.user) as { sentences: { text: string }[]; sections: { facts: { value: unknown }[] }[] };
     expect(JSON.stringify([read.sentences, read.sections.map((x) => x.facts.map((f) => f.value))])).not.toMatch(/bulkDiscount/);
-    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "no narration left" });
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: "written by the template: the writer left it empty" });
     expect(sectionsOf(scripts.technical!).find((x) => x.id === "title")!.narration).toBe("Apply the bulk discount from 5 units.");
+  });
+
+  it("gives a section the cut call left empty one more try on its own", async () => {
+    const asked: string[][] = [];
+    const writer: ScriptWriter = {
+      id: "fake",
+      writeCut: async ({ sections }) => ({ sections: Object.fromEntries(sections.map((x) => [x.id, x.id === "rule" ? [] : [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]])) }),
+      write: async (request) => {
+        asked.push(request.repair ?? []);
+        return [{ text: "The threshold for the bulk discount moved.", sources: ["pr:title"] }];
+      },
+    };
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), writer);
+    expect(asked).toEqual([["nothing was written for this section"]]);
+    expect(sectionsOf(scripts.technical!).find((x) => x.id === "rule")!.narration).toBe("The threshold for the bulk discount moved.");
+  });
+
+  it("falls back to the template's line when the writer leaves a section empty twice", async () => {
+    const writer: ScriptWriter = {
+      id: "fake",
+      writeCut: async ({ sections }) => ({ sections: Object.fromEntries(sections.map((x) => [x.id, x.id === "title" ? [] : [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]])) }),
+      write: async () => [],
+    };
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), writer);
+    const title = sectionsOf(scripts.technical!).find((x) => x.id === "title")!;
+    expect(title.narration).toBe("Apply the bulk discount from 5 units.");
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "title", message: "written by the template: the writer left it empty" });
   });
 
   it("gives a section the checks emptied one more try, saying why", async () => {
     const repairs: string[][] = [];
     const writer: ScriptWriter = {
       id: "fake",
-      writeCut: async ({ sections }) =>
-        Object.fromEntries(
+      writeCut: async ({ sections }) => ({
+        sections: Object.fromEntries(
           sections.map((x) => [x.id, [{ text: x.id === "rule" ? "The bulkDiscount threshold moved." : "Apply the bulk discount from 5 units.", sources: ["pr:title"] }]]),
         ),
+      }),
       write: async (request) => {
         repairs.push(request.repair ?? []);
         return [{ text: "The threshold for the bulk discount moved.", sources: ["pr:title"] }];
@@ -198,4 +228,100 @@ describe("writers", () => {
     expect(scripts.technical!.flags.filter((f) => f.sectionId === "rule" && f.message.startsWith("dropped"))).toEqual([]);
   });
 
+});
+
+describe("the picture's words", () => {
+  const sentence = [{ text: "Apply the bulk discount from 5 units.", sources: ["pr:title"] }];
+  const relabelling = (label: (id: string) => string): ScriptWriter => ({
+    id: "fake",
+    writeCut: async ({ sections }) => ({
+      sections: Object.fromEntries(sections.map((x) => [x.id, sentence])),
+      labels: Object.fromEntries(sections.map((x) => [x.id, Object.fromEntries(x.labels.map((l) => [l.id, label(l.id)]))])),
+    }),
+    write: async () => sentence,
+  });
+
+  it("puts the writer's labels in the picture, the business title too", async () => {
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), relabelling((id) => `plain words for ${id.split(":")[0]}`));
+    const business = sectionsOf(scripts.business!);
+    const title = business[0]!.visual as Extract<Visual, { type: "titleCard" }>;
+    expect(title.data.title).toBe("plain words for title");
+    const journey = business.find((x) => x.visual.type === "userJourney")!.visual as Extract<Visual, { type: "userJourney" }>;
+    expect(journey.data.steps.every((s) => s.label === "plain words for step")).toBe(true);
+    expect(scripts.business!.flags.filter((f) => f.message.startsWith("kept the picture"))).toEqual([]);
+  });
+
+  it("keeps the picture's own words where a label fails the checks", async () => {
+    const scripts = await scriptsOf(snapshotOf("05-condition-change"), relabelling((id) => (id.startsWith("rule:") ? "the bulkDiscount rule" : "from 7 units")));
+    const rule = sectionsOf(scripts.technical!).find((x) => x.id === "rule")!.visual as Extract<Visual, { type: "decisionDiagram" }>;
+    expect(rule.data.subject.label).toBe("bulk discount");
+    expect(rule.data.after.condition).toBe("quantity >= 5");
+    expect(scripts.technical!.flags).toContainEqual({ sectionId: "rule", message: `kept the picture's own words for ${rule.data.subject.id}: it names a code name` });
+    expect(scripts.business!.flags.some((f) => f.message.endsWith("it has a number that isn't evidence (7)"))).toBe(true);
+  });
+
+  it("rejects labels that are empty, too long, marked, code, or carry new numbers", () => {
+    const base = { cut: "business" as const, original: "Orders of 10 or more", max: 80, evidence: new Set(["5"]), components: ["pricing"], codeNames: ["bulkDiscount"] };
+    expect(labelProblem({ ...base, text: "Orders of 5 or more get the discount" })).toBeUndefined();
+    expect(labelProblem({ ...base, text: "Orders of 10 or more" })).toBeUndefined();
+    expect(labelProblem({ ...base, text: " " })).toBe("it's empty");
+    expect(labelProblem({ ...base, text: "x".repeat(81) })).toBe("it's longer than 80 characters");
+    expect(labelProblem({ ...base, text: 'a <mark name="m1"/> b' })).toBe("it has a mark");
+    expect(labelProblem({ ...base, text: "calls bulkDiscount()" })).toBe("it names code");
+    expect(labelProblem({ ...base, text: "Orders of 7 or more" })).toBe("it has a number that isn't evidence (7)");
+  });
+});
+
+describe("fuller sections", () => {
+  const cutWriter = (say: (id: string) => string): ScriptWriter => ({
+    id: "fake",
+    writeCut: async ({ sections }) => ({ sections: Object.fromEntries(sections.map((x) => [x.id, [{ text: say(x.id), sources: ["pr:title"] }]])) }),
+    write: async (request) => [{ text: say(request.id), sources: ["pr:title"] }],
+  });
+  const long = "Every key of a team now shares one limit, so a team with several keys no longer gets more room than it pays for.";
+
+  it("tells the writer what moved in the code, in words, and how much each section should say", async () => {
+    const requests: LlmRequest[] = [];
+    const llm: Llm = {
+      completeJson: async (request) => {
+        requests.push(request);
+        return { sections: [] };
+      },
+    };
+    await scriptsOf(snapshotOf("05-condition-change"), modelWriter(llm, "gpt-6-luna")).catch(() => undefined);
+    const sent = JSON.parse(requests[0]!.user) as { changes: { id: string; name: string; change: string }[]; sections: { id: string; minWords: number; wordLimit: number }[] };
+    expect(sent.changes[0]).toMatchObject({ name: "bulk discount", change: "a condition in it changed" });
+    expect(JSON.stringify(sent.changes.map((c) => c.name))).not.toMatch(/bulkDiscount/);
+    const byId = new Map(sent.sections.map((x) => [x.id, x]));
+    expect(byId.get("title")!.minWords).toBe(Math.min(8, byId.get("title")!.wordLimit));
+    expect(byId.get("rule")!.minWords).toBeGreaterThanOrEqual(15);
+    expect(byId.get("rule")!.minWords).toBeLessThanOrEqual(byId.get("rule")!.wordLimit);
+  });
+
+  it("folds a thin section into the article when its chapter has a fuller one", async () => {
+    const say = (id: string) => (id === "changeMap" ? "The pricing changed." : long);
+    const snapshot = snapshotOf("15-rate-limit-per-org");
+    const folded = await buildScripts(snapshot, { classifier: mockClassifier, writer: cutWriter(say) }, { foldThin: true });
+    const kept = await buildScripts(snapshot, { classifier: mockClassifier, writer: cutWriter(say) });
+    const chapter = (scripts: typeof folded) => scripts.technical!.chapters.find((c) => c.sections.some((s) => s.id === "changeMap"))!;
+    expect(chapter(folded).sections.length).toBeGreaterThan(1);
+    expect(chapter(folded).sections.find((s) => s.id === "changeMap")!.article.readMore).toBe(true);
+    expect(folded.technical!.flags).toContainEqual({ sectionId: "changeMap", message: "folded into the article: 3 words is too thin for its own scene" });
+    expect(chapter(kept).sections.find((s) => s.id === "changeMap")!.article.readMore).toBe(false);
+  });
+
+  it("never folds the title or the wrap, or a section alone in its chapter", async () => {
+    const folded = await buildScripts(snapshotOf("05-condition-change"), { classifier: mockClassifier, writer: cutWriter(() => "It changed.") }, { foldThin: true });
+    for (const c of folded.technical!.chapters) {
+      if (c.sections.length === 1) expect(c.sections[0]!.article.readMore).toBe(false);
+    }
+    expect(sectionsOf(folded.technical!).find((s) => s.id === "title")!.article.readMore).toBe(false);
+    expect(sectionsOf(folded.technical!).find((s) => s.id === "wrap")!.article.readMore).toBe(false);
+  });
+
+  it("flags a section well under its floor", () => {
+    const visual = { type: "recap", data: { chapters: [] } } as unknown as Visual;
+    const flags = checkSection({ cut: "technical", draft: false, sentences: [{ text: "Short.", sources: ["pr:title"] }], visual, known: new Set(["pr:title"]), evidence: new Set(), components: [], codeNames: [], minWords: 20 }).flags;
+    expect(flags).toContain("shorter than its 20-word floor (1 words)");
+  });
 });

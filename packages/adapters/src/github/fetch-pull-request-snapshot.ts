@@ -26,6 +26,17 @@ const FAILED_CONCLUSIONS = new Set([
   "startup_failure",
 ]);
 
+/** Every file path at a commit, for the parts around the change; missing when GitHub can't say. */
+async function readTree(gh: Octokit, owner: string, repo: string, sha: string): Promise<PullRequestSnapshot["tree"]> {
+  try {
+    const { data } = await gh.git.getTree({ owner, repo, tree_sha: sha, recursive: "1", ...timeout() });
+    const paths = data.tree.filter((entry) => entry.type === "blob" && entry.path).map((entry) => entry.path!);
+    return { paths: paths.slice(0, LIMITS.treePaths), truncated: data.truncated || paths.length > LIMITS.treePaths };
+  } catch {
+    return undefined;
+  }
+}
+
 function splitFullName(fullName: string): { owner: string; repo: string } {
   const [owner, repo] = fullName.split("/");
   return { owner, repo };
@@ -238,10 +249,11 @@ export async function fetchPullRequestSnapshot(
       wanted.push({ file, side: "head", expression: `${headSha}:${file.filename}` });
     }
   }
-  const [blobs, linkedIssues, ciConclusion] = await Promise.all([
+  const [blobs, linkedIssues, ciConclusion, tree] = await Promise.all([
     readBlobs(gh, owner, repo, wanted.map((w) => w.expression)),
     readLinkedIssues(gh, owner, repo, pr.body ?? null),
     readCiConclusion(gh, owner, repo, headSha),
+    readTree(gh, owner, repo, headSha),
   ]);
   if (blobs.failed) truncated = true;
 
@@ -293,5 +305,6 @@ export async function fetchPullRequestSnapshot(
     })),
     linkedIssues,
     ciConclusion,
+    ...(tree && { tree }),
   });
 }

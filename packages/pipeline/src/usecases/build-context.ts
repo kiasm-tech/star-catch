@@ -5,6 +5,7 @@ import {
   applyLabels,
   classify,
   classifyItems,
+  layoutOf,
   toAnalyzeInput,
   type Classifier,
   type LabelCache,
@@ -39,6 +40,7 @@ export async function buildContext(snapshot: unknown, { classifier, labelCache }
   const classed = applyClasses(sentences, results);
   const { links, entryPoints } = changes;
   const concerns = concernsOf(units, links, entryPoints);
+  const changedComponents = new Set(units.filter((u) => u.verdict !== "notAChange" && u.component !== "").map((u) => u.component));
   return ContextSchema.parse({
     version: CONTEXT_VERSION,
     labelSetVersion: LABEL_SET_VERSION,
@@ -52,5 +54,6 @@ export async function buildContext(snapshot: unknown, { classifier, labelCache }
     sentences: classed,
     facts: factsOf({ units, links, entryPoints, concerns, sentences: classed }),
     excluded: changes.excluded,
+    ...(pr.tree && { layout: layoutOf(pr.tree.paths, pr.files, changedComponents) }),
   });
 }

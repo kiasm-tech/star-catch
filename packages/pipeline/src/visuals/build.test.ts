@@ -1,4 +1,4 @@
-import { IMPLEMENTED_VISUALS, VisualSchema, type Context, type Cut, type PullRequestSnapshot } from "@kiasm-tech/star-catch-contracts";
+import { IMPLEMENTED_VISUALS, VisualSchema, type Context, type Cut, type PullRequestSnapshot, type Visual } from "@kiasm-tech/star-catch-contracts";
 import { mockClassifier } from "@star-catch/changes";
 import { loadRecordedSnapshots, loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
@@ -106,6 +106,89 @@ describe("buildVisual", () => {
     const built = buildVisual("changeMap", input);
     expect(VisualSchema.parse(built.visual).type).toBe("componentMap");
     expect(built.flags).toEqual(["changeMap: kept the first 7 of 9 components"]);
+  });
+
+  it("sets the changed parts among their unchanged neighbours, the ones they import first", async () => {
+    const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
+    const changedComponent = context.units.find((u) => u.verdict !== "notAChange")!.component;
+    const withLayout: Context = {
+      ...context,
+      layout: {
+        neighbours: [
+          { component: "checkout", files: 12 },
+          { component: "catalog", files: 9 },
+          { component: "cart", files: 4 },
+        ],
+        uses: [{ from: changedComponent, to: "cart" }],
+      },
+    };
+    const input = { context: withLayout, pr: { fullName: "acme/shop", number: 1, title: "x" }, cut: "technical" as const, plan: selectSections(withLayout, "technical", { open: false }) };
+    const map = VisualSchema.parse(buildVisual("changeMap", input).visual) as Extract<Visual, { type: "componentMap" }>;
+    const unchanged = map.data.nodes.filter((n) => !n.changed);
+    expect(unchanged.map((n) => n.label)).toEqual(["cart", "checkout", "catalog"]);
+    expect(map.data.edges).toContainEqual({ id: `edge:${changedComponent}->cart`, from: `component:${changedComponent}`, to: "component:cart" });
+    // The neighbours sit below every changed part.
+    const lowest = Math.max(...map.data.nodes.filter((n) => n.changed).map((n) => n.box.y + n.box.h));
+    expect(unchanged.every((n) => n.box.y > lowest)).toBe(true);
+    // The review focus stays on what changed.
+    const focus = buildVisual("reviewFocus", { ...input, plan: selectSections(withLayout, "technical", { open: true }) }).visual as Extract<Visual, { type: "componentMap" }>;
+    expect(focus.data.nodes.every((n) => n.changed)).toBe(true);
+  });
+
+  it("keeps the map to seven parts, neighbours filling only what's left", async () => {
+    const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
+    const unit = context.units.find((u) => u.verdict !== "notAChange")!;
+    const six: Context = {
+      ...context,
+      units: Array.from({ length: 6 }, (_, i) => ({ ...unit, id: `c${i}/a.ts#f`, file: `c${i}/a.ts`, component: `c${i}` })),
+      concerns: [],
+      layout: { neighbours: [{ component: "x", files: 3 }, { component: "y", files: 2 }], uses: [] },
+    };
+    const input = { context: six, pr: { fullName: "acme/shop", number: 1, title: "x" }, cut: "technical" as const, plan: selectSections(six, "technical", { open: false }) };
+    const map = buildVisual("changeMap", input).visual as Extract<Visual, { type: "componentMap" }>;
+    expect(map.data.nodes.map((n) => [n.label, n.changed])).toContainEqual(["x", false]);
+    expect(map.data.nodes).toHaveLength(7);
+  });
+
+  it("opens a map with one component into what changed in it", async () => {
+    const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
+    const unit = context.units.find((u) => u.verdict !== "notAChange")!;
+    const one: Context = {
+      ...context,
+      units: [
+        { ...unit, id: "src/cart/totals.ts#itemTotal", file: "src/cart/totals.ts", name: "itemTotal", component: "cart", refactorings: ["rename"] },
+        { ...unit, id: "src/cart/totals.ts#cartTotal", file: "src/cart/totals.ts", name: "cartTotal", component: "cart", refactorings: [], changeType: "bodyChanged" },
+      ],
+      concerns: [],
+      layout: undefined,
+    };
+    const input = { context: one, pr: { fullName: "acme/shop", number: 1, title: "x" }, cut: "technical" as const, plan: selectSections(one, "technical", { open: false }) };
+    const map = VisualSchema.parse(buildVisual("changeMap", input).visual) as Extract<Visual, { type: "componentMap" }>;
+    expect(map.data.nodes[0]!.changes).toEqual([
+      { file: "src/cart/totals.ts", name: "item total", change: "renamed" },
+      { file: "src/cart/totals.ts", name: "cart total", change: "changed" },
+    ]);
+    expect(map.data.nodes[0]!.box).toEqual({ x: 220, y: (562 - 156) / 2, w: 560, h: 64 + 32 + 2 * 30 });
+  });
+
+  it("lists each component's changed files, first four by rank, and makes room for them", async () => {
+    const context = (await inputs(fixtures.find((f) => f.name === "05-condition-change")!.snapshot))[0]!.input.context;
+    const unit = context.units[0]!;
+    const many: Context = {
+      ...context,
+      units: [...Array.from({ length: 5 }, (_, i) => ({ ...unit, id: `src/pricing/f${i}.ts#f`, file: `src/pricing/f${i}.ts`, component: "pricing" })), { ...unit, id: "src/cart/a.ts#f", file: "src/cart/a.ts", component: "cart" }],
+      concerns: [],
+      layout: undefined,
+    };
+    const input = { context: many, pr: { fullName: "acme/shop", number: 1, title: "x" }, cut: "technical" as const, plan: selectSections(many, "technical", { open: false }) };
+    const built = buildVisual("changeMap", input);
+    const map = VisualSchema.parse(built.visual) as Extract<Visual, { type: "componentMap" }>;
+    expect(map.data.nodes.map((n) => [n.label, n.files])).toEqual([
+      ["pricing", ["src/pricing/f0.ts", "src/pricing/f1.ts", "src/pricing/f2.ts", "src/pricing/f3.ts"]],
+      ["cart", ["src/cart/a.ts"]],
+    ]);
+    expect(map.data.nodes.every((n) => n.box.h === 72 + 4 * 30)).toBe(true);
+    expect(built.flags).toEqual(["changeMap: kept the first 4 of 5 files in pricing"]);
   });
 });
 

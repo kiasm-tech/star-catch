@@ -37,7 +37,7 @@ function pythonModule(path: string, module: string): string {
  * The repo paths (without extension) a file imports: relative TS/JS specifiers resolved against the
  * file; Python and Java modules as path suffixes. Package imports resolve to nothing in the repo.
  */
-function importsOf(path: string, source: string): string[] {
+export function importsOf(path: string, source: string): string[] {
   if (path.endsWith(".py")) {
     // `from pkg import mod` may name a submodule, so each imported name is a candidate too.
     const from = [...source.matchAll(PY_FROM)].flatMap((m) => {
@@ -59,7 +59,8 @@ function importsOf(path: string, source: string): string[] {
     .map((specifier) => withoutExtension(normalise(directory(path) + specifier)));
 }
 
-function imports(importer: string[], file: string): boolean {
+/** Whether a file is among what `importsOf` returned for some importer. */
+export function imports(importer: string[], file: string): boolean {
   const target = withoutExtension(file);
   return importer.some((spec) =>
     spec.startsWith("*/") ? target === spec.slice(2) || target.endsWith(`/${spec.slice(2)}`) : target === spec || target === `${spec}/index`,

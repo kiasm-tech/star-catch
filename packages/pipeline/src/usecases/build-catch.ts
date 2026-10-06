@@ -5,7 +5,8 @@ import { buildScripts, type ScriptPorts } from "./build-scripts.js";
 /** A snapshot → the catch Crux shows: the PR's chrome and both cuts' scripts. */
 export async function buildCatch(snapshot: unknown, ports: ScriptPorts, options: ContextOptions = {}): Promise<CatchVersion> {
   const pr = PullRequestSnapshotSchema.parse(snapshot);
-  const scripts = await buildScripts(pr, ports, options);
+  // What people watch: thin sections fold into the article.
+  const scripts = await buildScripts(pr, ports, { ...options, foldThin: true });
   return CatchVersionSchema.parse({
     catchId: catchIdOf(pr.fullName, pr.number),
     pr: {

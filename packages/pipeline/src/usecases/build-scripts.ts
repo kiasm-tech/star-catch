@@ -11,13 +11,13 @@ export interface ScriptPorts extends ContextPorts {
 export async function buildScripts(
   snapshot: unknown,
   { writer, ...ports }: ScriptPorts,
-  options: ContextOptions & Pick<ScriptOptions, "instruction"> = {},
+  options: ContextOptions & Pick<ScriptOptions, "instruction" | "foldThin"> = {},
 ): Promise<Scripts> {
   const pr = PullRequestSnapshotSchema.parse(snapshot);
   const context = await buildContext(pr, ports, options);
   return generateScripts(
     context,
     { fullName: pr.fullName, number: pr.number, title: pr.title, ...(pr.author && { author: pr.author }) },
-    { writer, open: pr.state === "open", ...(options.instruction && { instruction: options.instruction }), ...(options.signal && { signal: options.signal }) },
+    { writer, open: pr.state === "open", ...(options.instruction && { instruction: options.instruction }), ...(options.foldThin && { foldThin: true }), ...(options.signal && { signal: options.signal }) },
   );
 }

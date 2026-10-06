@@ -1,5 +1,6 @@
 /** Each section's visual data, from the context alone (spec-update-structure.md §6–§8). */
 import {
+  MAX_FILES,
   MAX_PRIMARY,
   type ChangeUnit,
   type Context,
@@ -12,7 +13,7 @@ import {
 } from "@kiasm-tech/star-catch-contracts";
 import { CHAPTER_TITLES } from "../script/sections.js";
 import { FactIndex } from "../script/facts-index.js";
-import { lanes, rows } from "./layout.js";
+import { lanes, rows, stack } from "./layout.js";
 import { clip, humanize, plainTitle, testTitle } from "./words.js";
 
 /** What a visual may say about the PR itself; never its state (open or merged). */
@@ -160,7 +161,31 @@ const beforeAfter: Builder = (s, { pr }, flags) => {
   };
 };
 
-function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new Set()): Visual {
+const changeWord = (u: ChangeUnit): "added" | "removed" | "changed" | "renamed" | "moved" =>
+  u.refactorings.includes("rename") ? "renamed" : u.changeType === "added" || u.changeType === "removed" || u.changeType === "moved" ? u.changeType : "changed";
+
+/** The one box of a single-component map, sized for its files and the changes under them. */
+function opened(files: number, changes: number) {
+  const w = 560;
+  const h = 64 + files * 32 + changes * 30;
+  return { x: (1000 - w) / 2, y: Math.max(20, Math.round((562 - h) / 2)), w, h };
+}
+
+/** The unchanged parts worth showing beside `components`: the ones they import first, then the biggest. */
+function neighboursOf(s: Source, components: string[]): { names: string[]; uses: { from: string; to: string }[] } {
+  const layout = s.context.layout;
+  const room = MAX_PRIMARY - components.length;
+  if (!layout || room <= 0) return { names: [], uses: [] };
+  const uses = layout.uses.filter((u) => components.includes(u.from));
+  const used = new Set(uses.map((u) => u.to));
+  const names = [...layout.neighbours]
+    .sort((a, b) => Number(used.has(b.component)) - Number(used.has(a.component)))
+    .slice(0, room)
+    .map((n) => n.component);
+  return { names, uses: uses.filter((u) => names.includes(u.to)) };
+}
+
+function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new Set(), withNeighbours = false): Visual {
   const changed = s.ranked(s.context.units.filter((u) => u.verdict !== "notAChange" && u.component !== ""));
   const components = top([...new Set(changed.map((u) => u.component))], "components", flags);
   const of = new Map(changed.map((u) => [u.id, u.component]));
@@ -171,17 +196,45 @@ function componentMap(s: Source, flags: string[], focusUnits: Set<string> = new 
     const id = `edge:${from}->${to}`;
     edges.set(id, { id, from: `component:${from}`, to: `component:${to}` });
   }
-  const boxes = rows(components.length);
+  const files = new Map(
+    components.map((c) => {
+      const all = [...new Set(changed.filter((u) => u.component === c).map((u) => u.file))];
+      if (all.length > MAX_FILES) flags.push(`kept the first ${MAX_FILES} of ${all.length} files in ${c}`);
+      return [c, all.slice(0, MAX_FILES)] as const;
+    }),
+  );
+  // One component opens to show what changed in it; otherwise boxes grow to list their files.
+  const only = components.length === 1 ? components[0]! : undefined;
+  const changes = only
+    ? top(
+        changed.filter((u) => u.component === only && u.unitKind !== "file").map((u) => ({ file: u.file, name: clip(humanize(u.name)), change: changeWord(u) })),
+        "changes",
+        flags,
+      )
+    : [];
+  const most = Math.max(0, ...[...files.values()].map((f) => f.length));
+  const neighbours = withNeighbours ? neighboursOf(s, components) : { names: [], uses: [] };
+  for (const u of neighbours.uses) edges.set(`edge:${u.from}->${u.to}`, { id: `edge:${u.from}->${u.to}`, from: `component:${u.from}`, to: `component:${u.to}` });
+  // The changed parts on top, the unchanged ones they sit among in a row below.
+  const [boxes, around] = stack([
+    only && changes.length > 0 ? [opened(files.get(only)!.length, changes.length)] : rows(components.length, 72 + most * 30),
+    rows(neighbours.names.length),
+  ]);
   return {
     type: "componentMap",
     data: {
-      nodes: components.map((c, i) => ({
-        id: `component:${c}`,
-        label: c,
-        box: boxes[i]!,
-        changed: true,
-        ...(focusUnits.size > 0 && { focus: changed.some((u) => u.component === c && focusUnits.has(u.id)) }),
-      })),
+      nodes: [
+        ...components.map((c, i) => ({
+          id: `component:${c}`,
+          label: c,
+          box: boxes[i]!,
+          changed: true,
+          ...(files.get(c)!.length > 0 && { files: files.get(c)! }),
+          ...(c === only && changes.length > 0 && { changes }),
+          ...(focusUnits.size > 0 && { focus: changed.some((u) => u.component === c && focusUnits.has(u.id)) }),
+        })),
+        ...neighbours.names.map((n, i) => ({ id: `component:${n}`, label: n, box: around![i]!, changed: false })),
+      ],
       edges: [...edges.values()],
     },
   };
@@ -440,7 +493,7 @@ const BUILDERS: Record<SectionId | DraftSectionId, Builder | undefined> & Record
   headline: titleCard,
   problem: beforeAfter,
   before: userJourney,
-  changeMap: (s, _i, flags) => componentMap(s, flags),
+  changeMap: (s, _i, flags) => componentMap(s, flags, new Set(), true),
   reviewFocus: (s, _i, flags) => componentMap(s, flags, new Set(s.context.concerns.filter((c) => c.rank <= 3).flatMap((c) => c.unitIds))),
   structureChange: architectureMorph,
   contractChange: contractCard,

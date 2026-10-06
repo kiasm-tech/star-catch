@@ -9,12 +9,14 @@ import {
   type ScriptSection,
   type SectionPlan,
 } from "@kiasm-tech/star-catch-contracts";
-import type { ScriptWriter, SectionBrief, WrittenSentence } from "../ports/script-writer.js";
+import type { ScriptWriter, SectionBrief, UnitChange, WrittenSentence } from "../ports/script-writer.js";
 import { buildVisual, type PrInfo, type VisualInput } from "../visuals/build.js";
 import { revealable } from "../visuals/elements.js";
-import { deCode } from "../visuals/words.js";
-import { checkSection, wordCount, type Checked } from "./checks.js";
+import { labelsOf, mapLabels } from "../visuals/labels.js";
+import { clip, deCode, humanize } from "../visuals/words.js";
+import { checkSection, labelProblem, wordCount, type Checked } from "./checks.js";
 import { CHAPTER_TITLES, SECTION_FACTS, SECTION_PURPOSES, SECTION_TITLES } from "./sections.js";
+import { templateWriter } from "./template-writer.js";
 import { CAP_SECONDS, WORDS_PER_MINUTE, selectSections } from "./select.js";
 
 export interface ScriptOptions {
@@ -23,7 +25,44 @@ export interface ScriptOptions {
   open: boolean;
   /** A developer's request for every section, from `@star-catch fix …`. */
   instruction?: string;
+  /** Fold a section too thin for its own scene into the article (exports do; tests of selection don't). */
+  foldThin?: boolean;
   signal?: AbortSignal;
+}
+
+/** Fewer spoken words than this, and a section shares its chapter's scene time with nothing to show for it. */
+const THIN_WORDS = 12;
+/** Sections whose one line is the point. */
+const ONE_LINERS = new Set(["title", "headline", "wrap"]);
+
+const CHANGE_WORDS: Record<string, string> = {
+  added: "added",
+  removed: "removed",
+  signatureChanged: "what it takes or returns changed",
+  conditionChanged: "a condition in it changed",
+  bodyChanged: "what it does changed",
+  moved: "moved",
+};
+
+/** The changed units, most important first, described in words for the writer. */
+function changesOf(context: Context, max = 12): UnitChange[] {
+  const rank = new Map(context.concerns.flatMap((c) => c.unitIds.map((id) => [id, c.rank] as const)));
+  const order = new Map(context.units.map((u, i) => [u.id, i]));
+  const names = new Map(context.units.map((u) => [u.id, humanize(u.name)]));
+  const calls = context.links.filter((l) => l.type === "calls");
+  return context.units
+    .filter((u) => u.verdict !== "notAChange")
+    .sort((a, b) => (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99) || order.get(a.id)! - order.get(b.id)!)
+    .slice(0, max)
+    .map((u) => ({
+      id: u.id,
+      name: names.get(u.id)!,
+      file: u.file.split("/").at(-1)!,
+      component: u.component,
+      change: [u.refactorings.includes("rename") ? "renamed" : "", CHANGE_WORDS[u.changeType] ?? u.changeType].filter(Boolean).join(", "),
+      callers: calls.filter((l) => l.to === u.id).length,
+      calls: calls.filter((l) => l.from === u.id).flatMap((l) => names.get(l.to) ?? []).slice(0, 3),
+    }));
 }
 
 export type Scripts = Record<Cut, Script | null>;
@@ -73,10 +112,13 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     const scope = SECTION_FACTS[id as keyof typeof SECTION_FACTS];
     const brief: SectionBrief = {
       id,
+      // A floor of 0 reads as "write nothing"; a one-liner still needs its line.
+      minWords: Math.min(wordLimit, ONE_LINERS.has(id) ? 8 : Math.max(15, Math.round(wordLimit * 0.5))),
       heading: SECTION_TITLES[id as keyof typeof SECTION_TITLES],
       purpose: SECTION_PURPOSES[id as keyof typeof SECTION_PURPOSES],
       visual: built.visual,
       elements: revealable(built.visual).map((e) => ({ ...e, label: deCode(e.label) })),
+      labels: labelsOf(built.visual, cut).map((l) => ({ ...l, text: deCode(l.text) })),
       facts: context.facts
         .filter((f) => scope.some((s) => s === f.group || s === `${f.group}.${f.key}`))
         .map((f) => ({ ...f, value: typeof f.value === "string" ? deCode(f.value) : Array.isArray(f.value) ? f.value.map(deCode) : f.value })),
@@ -85,12 +127,14 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     return { brief, readMore, draft, visualFlags: built.flags.map((f) => f.replace(/^[^:]+: /, "")) };
   });
 
-  const shared = { cut, sentences, pr: { title: pr.title }, ...(options.instruction && { instruction: options.instruction }) };
+  const shared = { cut, sentences, changes: changesOf(context), pr: { title: pr.title }, ...(options.instruction && { instruction: options.instruction }) };
   const first = new Map<string, WrittenSentence[]>();
+  const relabels = new Map<string, Record<string, string>>();
   if (options.writer.writeCut) {
     try {
       const all = await options.writer.writeCut({ ...shared, sections: planned.map((p) => p.brief) }, options.signal);
-      for (const p of planned) first.set(p.brief.id, all[p.brief.id] ?? []);
+      for (const p of planned) first.set(p.brief.id, all.sections[p.brief.id] ?? []);
+      for (const [id, labels] of Object.entries(all.labels ?? {})) relabels.set(id, labels);
     } catch (error) {
       fail("script", error);
     }
@@ -105,29 +149,64 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
   }
 
   const check = (p: Planned, written: WrittenSentence[]): Checked =>
-    checkSection({ cut, draft: p.draft, sentences: written, visual: p.brief.visual, known, evidence, components, codeNames, wordLimit: p.brief.wordLimit });
+    checkSection({ cut, draft: p.draft, sentences: written, visual: p.brief.visual, known, evidence, components, codeNames, wordLimit: p.brief.wordLimit, minWords: p.brief.minWords });
   const dropped = (c: Checked) => c.flags.filter((f) => f.startsWith("dropped"));
+
+  /** The picture in the writer's words where they pass the checks; else its own, code spelled out for business. */
+  const pictureOf = (p: Planned): ScriptSection["visual"] => {
+    const originals = new Map(labelsOf(p.brief.visual, cut).map((l) => [l.id, l]));
+    const accepted = new Map<string, string>();
+    for (const [id, text] of Object.entries(relabels.get(p.brief.id) ?? {})) {
+      const original = originals.get(id);
+      if (!original) continue;
+      const problem = labelProblem({ cut, text, original: original.text, max: original.max, evidence, components, codeNames });
+      if (problem) flags.push({ sectionId: p.brief.id, message: `kept the picture's own words for ${id}: ${problem}` });
+      else accepted.set(id, text.trim());
+    }
+    return mapLabels(p.brief.visual, cut, (id, text) => accepted.get(id) ?? (cut === "business" ? clip(deCode(text), originals.get(id)!.max) : text));
+  };
 
   const sections = new Map<string, ScriptSection>();
   for (const p of planned) {
     let checked = check(p, first.get(p.brief.id) ?? []);
-    // One more try for a section the checks emptied or cut, told exactly why.
-    if (dropped(checked).length > 0) {
+    // One more try for a section the checks emptied or cut, told exactly why; or that came back with nothing.
+    const nothing = (first.get(p.brief.id) ?? []).length === 0;
+    if (dropped(checked).length > 0 || nothing) {
       try {
-        const retry = check(p, await options.writer.write({ ...shared, ...p.brief, repair: dropped(checked) }, options.signal));
-        if (dropped(retry).length < dropped(checked).length) checked = retry;
+        const retry = check(p, await options.writer.write({ ...shared, ...p.brief, repair: nothing ? ["nothing was written for this section"] : dropped(checked) }, options.signal));
+        if (nothing ? retry.sentences.length > 0 : dropped(retry).length < dropped(checked).length) checked = retry;
       } catch (error) {
         fail(p.brief.id, error);
       }
     }
+    // Still nothing: the template's line, which every section has, rather than a silent scene.
+    if (checked.sentences.length === 0 && options.writer.id !== templateWriter.id) {
+      const fallback = check(p, await templateWriter.write({ ...shared, ...p.brief }));
+      if (fallback.sentences.length > 0) checked = { ...fallback, flags: [...fallback.flags, "written by the template: the writer left it empty"] };
+    }
     flags.push(...[...p.visualFlags, ...checked.flags].map((message) => ({ sectionId: p.brief.id, message })));
     sections.set(p.brief.id, {
       id: p.brief.id,
-      visual: p.brief.visual,
+      visual: pictureOf(p),
       ...voiceMarks(checked.sentences),
       sources: [...new Set(checked.sentences.flatMap((s) => s.sources))],
       article: { heading: p.brief.heading, readMore: p.readMore },
     });
+  }
+
+  // A thin section beside a fuller one in its chapter goes to the article: fewer, fuller scenes.
+  if (options.foldThin) {
+    for (const c of plan.chapters) {
+      for (const s of c.sections) {
+        const section = sections.get(s.id)!;
+        if (section.article.readMore || ONE_LINERS.has(s.id)) continue;
+        const words = wordCount(section.narration);
+        const others = c.sections.filter((o) => o.id !== s.id && !sections.get(o.id)!.article.readMore && wordCount(sections.get(o.id)!.narration) >= THIN_WORDS);
+        if (words >= THIN_WORDS || others.length === 0) continue;
+        sections.set(s.id, { ...section, article: { ...section.article, readMore: true } });
+        flags.push({ sectionId: s.id, message: `folded into the article: ${words} words is too thin for its own scene` });
+      }
+    }
   }
 
   const chapters = plan.chapters.map((c) => ({ id: c.id, title: CHAPTER_TITLES[c.id], sections: c.sections.map((s) => sections.get(s.id)!) }));
