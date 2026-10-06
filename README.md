@@ -38,6 +38,11 @@ The worker snapshots each PR on an enabled repo, then builds its catch with both
 with `STAR_CATCH_MOCK_LLM=true`). A repo is enabled in `star_catch.repo_settings`, as Crux sets it,
 or by `STAR_CATCH_REPOS` (comma-separated, always on).
 
+Once a catch has a video, the worker comments on the PR as the GitHub App (one comment, edited on
+later runs) with a link to `${CRUX_PUBLIC_URL}/star-catch/<catchId>`. Without `CRUX_PUBLIC_URL` it
+doesn't comment; with `STAR_CATCH_MOCK_GITHUB=true` comments stay in memory and link to
+`http://localhost:3000`. The App needs the *Pull requests: write* permission.
+
 Dependency rules: [test/architecture.test.ts](test/architecture.test.ts), mirrored in ESLint.
 
 ## Publishing the contracts package

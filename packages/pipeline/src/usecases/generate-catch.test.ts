@@ -42,6 +42,21 @@ describe("generateCatch", () => {
     expect(runs.start).not.toHaveBeenCalled();
   });
 
+  it("queues the comment once the catch is saved, keyed by repo and commit", async () => {
+    const { deps } = setUp();
+    const send = vi.fn(async () => true);
+    expect(await generateCatch({ ...deps, commentQueue: { send } }, { ...job, installationId: 42 })).toBe("generated");
+    expect(send).toHaveBeenCalledWith("star-catch.comment", { ...job, installationId: 42 }, { singletonKey: `${snapshot.fullName.toLowerCase()}@${snapshot.headSha}` });
+  });
+
+  it("queues no comment for a job without an installation, or without a comment queue", async () => {
+    const { deps } = setUp();
+    const send = vi.fn(async () => true);
+    expect(await generateCatch({ ...deps, commentQueue: { send } }, job)).toBe("generated");
+    expect(await generateCatch(deps, { ...job, installationId: 42 })).toBe("generated");
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("records where a failure stopped and lets it through for a retry", async () => {
     const { deps, runs } = setUp();
     deps.catches.save = async () => {

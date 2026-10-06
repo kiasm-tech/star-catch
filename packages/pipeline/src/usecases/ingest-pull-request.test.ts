@@ -49,7 +49,7 @@ describe("ingestPullRequest", () => {
     expect(await ingestPullRequest(deps, job())).toBe("stored");
     expect(snapshot).toHaveBeenCalledWith({ fullName: "acme/shop", number: 7, installationId: 42 });
     expect(snapshots.saved).toHaveLength(1);
-    expect(send).toHaveBeenCalledWith("star-catch.generate", { fullName: "acme/shop", number: 7, headSha: HEAD }, { singletonKey: `acme/shop@${HEAD}` });
+    expect(send).toHaveBeenCalledWith("star-catch.generate", { fullName: "acme/shop", number: 7, headSha: HEAD, installationId: 42 }, { singletonKey: `acme/shop@${HEAD}` });
   });
 
   it("snapshots a head commit once", async () => {
