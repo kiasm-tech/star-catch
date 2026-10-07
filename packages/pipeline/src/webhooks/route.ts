@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CRUX_GITHUB_EVENT_QUEUE, INGEST_QUEUE, ingestKey, type IngestJob } from "../jobs/queues.js";
+import { CRUX_GITHUB_EVENT_QUEUE, INGEST_QUEUE, PR_STATE_QUEUE, ingestKey, type IngestJob, type PrStateJob } from "../jobs/queues.js";
 
 /** The events Crux's access handlers take (githubWebhook.ts). */
 const CRUX_EVENTS = new Set([
@@ -13,7 +13,7 @@ const CRUX_EVENTS = new Set([
   "repository",
 ]);
 
-/** synchronize, closed and issue_comment wait for the tasks that handle them. */
+/** synchronize and issue_comment wait for the tasks that handle them; closed only changes the state. */
 const INGEST_ACTIONS = new Set(["opened", "reopened", "ready_for_review"]);
 
 const PullRequestDeliverySchema = z.object({
@@ -26,6 +26,10 @@ const PullRequestDeliverySchema = z.object({
     draft: z.boolean().default(false),
     user: z.object({ login: z.string().nullable(), type: z.string().default("User") }),
     head: z.object({ sha: z.string() }),
+    merged: z.boolean().default(false),
+    merged_at: z.string().nullable().optional(),
+    closed_at: z.string().nullable().optional(),
+    updated_at: z.string().optional(),
   }),
 });
 
@@ -42,8 +46,18 @@ export function routeDelivery(deliveryId: string, event: string, payload: Record
   }
   if (event !== "pull_request") return null;
   const parsed = PullRequestDeliverySchema.safeParse(payload);
-  if (!parsed.success || !INGEST_ACTIONS.has(parsed.data.action)) return null;
+  if (!parsed.success) return null;
   const { installation, repository, pull_request: pr } = parsed.data;
+  if (parsed.data.action === "closed") {
+    const job: PrStateJob = {
+      fullName: repository.full_name,
+      number: pr.number,
+      state: pr.merged ? "merged" : "closed",
+      at: (pr.merged ? pr.merged_at : pr.closed_at) ?? pr.updated_at ?? new Date().toISOString(),
+    };
+    return { queue: PR_STATE_QUEUE.name, data: job };
+  }
+  if (!INGEST_ACTIONS.has(parsed.data.action)) return null;
   const job: IngestJob = {
     deliveryId,
     fullName: repository.full_name,
