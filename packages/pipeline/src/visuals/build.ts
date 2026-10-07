@@ -23,6 +23,9 @@ export interface PrInfo {
   number: number;
   title: string;
   author?: string;
+  branch?: string;
+  /** Lockfiles and generated files left out. */
+  size?: { files: number; additions: number; deletions: number };
 }
 
 export interface VisualInput {
@@ -146,7 +149,14 @@ type Builder = (source: Source, input: VisualInput, flags: string[]) => Visual;
 
 const titleCard: Builder = (_s, { pr, cut }) => ({
   type: "titleCard",
-  data: { pr: { fullName: pr.fullName, number: pr.number }, title: clip(plainTitle(pr.title), 160), ...(pr.author && { author: pr.author }), cut },
+  data: {
+    pr: { fullName: pr.fullName, number: pr.number },
+    title: clip(plainTitle(pr.title), 160),
+    ...(pr.author && { author: pr.author }),
+    ...(pr.branch && { branch: pr.branch }),
+    ...(pr.size && { size: pr.size }),
+    cut,
+  },
 });
 
 const recap: Builder = (_s, { plan }) => ({

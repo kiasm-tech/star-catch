@@ -15,9 +15,13 @@ export async function buildScripts(
 ): Promise<Scripts> {
   const pr = PullRequestSnapshotSchema.parse(snapshot);
   const context = await buildContext(pr, ports, options);
+  // The size people read: lockfiles, generated and vendored files don't count.
+  const excluded = new Set(context.excluded.map((e) => e.file));
+  const counted = pr.files.filter((f) => !excluded.has(f.filename));
+  const size = { files: counted.length, additions: counted.reduce((n, f) => n + f.additions, 0), deletions: counted.reduce((n, f) => n + f.deletions, 0) };
   return generateScripts(
     context,
-    { fullName: pr.fullName, number: pr.number, title: pr.title, ...(pr.author && { author: pr.author }) },
+    { fullName: pr.fullName, number: pr.number, title: pr.title, ...(pr.author && { author: pr.author }), branch: pr.headRef, size },
     { writer, open: pr.state === "open", ...(options.instruction && { instruction: options.instruction }), ...(options.foldThin && { foldThin: true }), ...(options.signal && { signal: options.signal }) },
   );
 }
