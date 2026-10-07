@@ -78,7 +78,7 @@ describe("cli migrate", () => {
       const env = { ...mockEnv(), DATABASE_URL: database.url };
       expect(await run(["migrate"], env, io)).toBe(0);
       expect(await run(["migrate"], env, io)).toBe(0);
-      expect(out).toEqual(["applied  0001_star_catch.sql", "applied  0002_delivery_handled.sql", "applied  0003_catches.sql", "up to date"]);
+      expect(out).toEqual(["applied  0001_star_catch.sql", "applied  0002_delivery_handled.sql", "applied  0003_catches.sql", "applied  0004_run_usage.sql", "up to date"]);
     } finally {
       await database.drop();
     }

@@ -1,4 +1,4 @@
-import { CatchListSchema, RepoSettingSchema, StoredCatchSchema, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
+import { CatchListSchema, RepoSettingSchema, StoredCatchSchema, UsageListSchema, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
 import { buildCatch, mockClassifier, templateWriter, type StoredVersion } from "@star-catch/pipeline";
 import { loadSyntheticFixtures } from "@star-catch/testkit";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -30,6 +30,19 @@ function setUp(rows: StoredVersion[] = [{ headSha: "abc1234", generatedAt: new D
       isEnabled: async (fullName) => enabled.has(fullName.toLowerCase()),
       set: async (fullName, on) => void (on ? enabled.add(fullName.toLowerCase()) : enabled.delete(fullName.toLowerCase())),
       enabled: async () => [...enabled],
+    },
+    runs: {
+      recent: async () => [
+        {
+          fullName: "acme/shop",
+          number: 7,
+          headSha: "abc1234",
+          startedAt: new Date("2026-10-07T10:00:00Z"),
+          finishedAt: new Date("2026-10-07T10:01:30Z"),
+          status: "done" as const,
+          usage: [{ step: "classify", model: "gpt-6-luna", calls: 1, input: 12_000, output: 3_000 }],
+        },
+      ],
     },
     log: (entry) => void logs.push(entry),
   });
@@ -84,6 +97,24 @@ describe("api", () => {
 
     const many = await (await app.request("/v1/repos?repos=acme/api,acme/web", { headers: auth })).json();
     expect(many).toEqual({ repos: [{ fullName: "acme/api", enabled: true }, { fullName: "acme/web", enabled: false }] });
+  });
+
+  it("lists the runs of the asked repos with the tokens they used", async () => {
+    const res = await setUp().app.request("/v1/usage?repos=acme/shop", { headers: auth });
+    expect(UsageListSchema.parse(await res.json())).toEqual({
+      runs: [
+        {
+          fullName: "acme/shop",
+          number: 7,
+          headSha: "abc1234",
+          startedAt: "2026-10-07T10:00:00.000Z",
+          finishedAt: "2026-10-07T10:01:30.000Z",
+          status: "done",
+          usage: [{ step: "classify", model: "gpt-6-luna", calls: 1, input: 12_000, output: 3_000 }],
+        },
+      ],
+    });
+    expect((await setUp().app.request("/v1/usage?repos=nope", { headers: auth })).status).toBe(400);
   });
 
   it("rejects a settings body that isn't { enabled }", async () => {

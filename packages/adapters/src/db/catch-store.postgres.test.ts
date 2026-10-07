@@ -62,6 +62,19 @@ describe("PostgresRunLog", () => {
     expect(row).toMatchObject({ repo: "acme/shop", pr_number: 7, status: "failed", step: "write", error: "timeout" });
     expect(row.finished_at).toBeInstanceOf(Date);
   });
+
+  it("lists recent runs with the tokens they used, newest first", async () => {
+    const runs = new PostgresRunLog(db);
+    const first = await runs.start({ fullName: "acme/usage", number: 1, headSha: "sha-u1" });
+    await runs.finish(first, { status: "done", step: "save", usage: [{ step: "classify", model: "luna", calls: 1, input: 1200, output: 300 }] });
+    const second = await runs.start({ fullName: "Acme/Usage", number: 2, headSha: "sha-u2" });
+    expect(await runs.recent(["ACME/usage"])).toEqual([
+      expect.objectContaining({ number: 2, status: "running", finishedAt: null, usage: [] }),
+      expect.objectContaining({ number: 1, headSha: "sha-u1", status: "done", usage: [{ step: "classify", model: "luna", calls: 1, input: 1200, output: 300 }] }),
+    ]);
+    expect(second).toBeGreaterThan(first);
+    expect(await runs.recent([])).toEqual([]);
+  });
 });
 
 describe("PostgresRepoSettings", () => {

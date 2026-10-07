@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { Llm, LlmRequest } from "@star-catch/pipeline";
+import type { Llm, LlmRequest, UsageMeter } from "@star-catch/pipeline";
 
 export interface OpenAiOptions {
   apiKey: string;
@@ -8,6 +8,10 @@ export interface OpenAiOptions {
   model: string;
   maxTokens?: number;
   fetch?: typeof fetch;
+  /** Told the tokens of every call, including ones whose answer is then rejected. */
+  meter?: UsageMeter;
+  /** What the calls are for, in the meter: `classify` or `write`. */
+  step?: string;
 }
 
 const TOOL = "label";
@@ -36,6 +40,7 @@ export class OpenAiLlm implements Llm {
       },
       { signal },
     );
+    this.options.meter?.record({ step: this.options.step ?? "model", model: this.options.model, input: response.usage?.input_tokens ?? 0, output: response.usage?.output_tokens ?? 0 });
     if (response.incomplete_details?.reason === "max_output_tokens") {
       throw new Error(`Classifier answer cut off at ${this.options.maxTokens ?? 16_000} tokens`);
     }

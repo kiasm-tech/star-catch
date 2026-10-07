@@ -3,7 +3,8 @@ export type { DeliveryStatus, DeliveryStore, WebhookDelivery } from "./ports/del
 export type { SnapshotStore } from "./ports/snapshot-store.js";
 export type { JobQueue, QueueSpec } from "./ports/job-queue.js";
 export type { RepoSettings, RepoSettingsStore } from "./ports/repo-settings.js";
-export type { CatchStore, RunLog, RunStatus, StoredVersion } from "./ports/catch-store.js";
+export type { CatchStore, RunLog, RunRecord, RunStatus, StoredVersion } from "./ports/catch-store.js";
+export { memoryMeter, type TokenCall, type TokenUsage, type UsageMeter } from "./ports/usage.js";
 export type { CommentWrite, PullRequestComments } from "./ports/pull-request-comments.js";
 export {
   COMMENT_QUEUE,

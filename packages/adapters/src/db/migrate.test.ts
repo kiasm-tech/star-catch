@@ -28,7 +28,7 @@ describe("migrate", () => {
 
   it("creates the star_catch schema once", async () => {
     await setUp();
-    expect(await migrate(db)).toEqual(["0001_star_catch.sql", "0002_delivery_handled.sql", "0003_catches.sql"]);
+    expect(await migrate(db)).toEqual(["0001_star_catch.sql", "0002_delivery_handled.sql", "0003_catches.sql", "0004_run_usage.sql"]);
     expect(await migrate(db)).toEqual([]);
     expect(await tables("star_catch")).toEqual(["catch_runs", "catch_versions", "pr_snapshots", "repo_settings", "schema_migrations", "webhook_deliveries"]);
   });
@@ -36,7 +36,7 @@ describe("migrate", () => {
   it("applies each file once when runs overlap", async () => {
     await setUp();
     const runs = await Promise.all([migrate(db), migrate(db), migrate(db)]);
-    expect(runs.flat()).toEqual(["0001_star_catch.sql", "0002_delivery_handled.sql", "0003_catches.sql"]);
+    expect(runs.flat()).toEqual(["0001_star_catch.sql", "0002_delivery_handled.sql", "0003_catches.sql", "0004_run_usage.sql"]);
   });
 
   it("applies new files in name order and rolls back a failing run", async () => {

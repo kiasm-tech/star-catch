@@ -6,8 +6,9 @@ import {
   type CatchList,
   type RepoSetting,
   type StoredCatch,
+  type UsageList,
 } from "@kiasm-tech/star-catch-contracts";
-import type { CatchStore, RepoSettingsStore, StoredVersion } from "@star-catch/pipeline";
+import type { CatchStore, RepoSettingsStore, RunLog, StoredVersion } from "@star-catch/pipeline";
 import { Hono } from "hono";
 
 export interface ApiDeps {
@@ -15,6 +16,7 @@ export interface ApiDeps {
   token: string;
   catches: CatchStore;
   settings: RepoSettingsStore;
+  runs: Pick<RunLog, "recent">;
   log(entry: Record<string, unknown>): void;
 }
 
@@ -27,7 +29,7 @@ function reposOf(query: string | undefined): string[] | null {
   return repos.length <= API_LIMITS.repos && repos.every((r) => FULL_NAME.test(r)) ? repos : null;
 }
 
-export function createApp({ token, catches, settings, log }: ApiDeps): Hono {
+export function createApp({ token, catches, settings, runs, log }: ApiDeps): Hono {
   const app = new Hono();
   const expected = digest(`Bearer ${token}`);
 
@@ -59,6 +61,20 @@ export function createApp({ token, catches, settings, log }: ApiDeps): Hono {
     const row = await catches.latest(c.req.param("catchId"));
     const body = row && served(row);
     return body ? c.json(body) : c.json({ error: "No such catch" }, 404);
+  });
+
+  app.get("/v1/usage", async (c) => {
+    const repos = reposOf(c.req.query("repos"));
+    if (!repos) return c.json({ error: `repos must be up to ${API_LIMITS.repos} owner/repo names, comma-separated` }, 400);
+    const limit = Math.min(Number(c.req.query("limit")) || API_LIMITS.defaultRuns, API_LIMITS.runs);
+    const body: UsageList = {
+      runs: (await runs.recent(repos, limit)).map((r) => ({
+        ...r,
+        startedAt: r.startedAt.toISOString(),
+        finishedAt: r.finishedAt?.toISOString() ?? null,
+      })),
+    };
+    return c.json(body);
   });
 
   app.get("/v1/repos", async (c) => {

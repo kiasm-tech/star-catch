@@ -1,5 +1,5 @@
 import { repoKey, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
-import type { CatchStore, RunLog, RunStatus, StoredVersion } from "@star-catch/pipeline";
+import type { CatchStore, RunLog, RunRecord, RunStatus, StoredVersion, TokenUsage } from "@star-catch/pipeline";
 import type { StarCatchDb } from "./database.js";
 import { toJsonb } from "./jsonb.js";
 
@@ -56,11 +56,38 @@ export class PostgresRunLog implements RunLog {
     return Number(row.id);
   }
 
-  async finish(id: number, outcome: { status: RunStatus; step: string; error?: string }): Promise<void> {
+  async finish(id: number, outcome: { status: RunStatus; step: string; error?: string; usage?: TokenUsage[] }): Promise<void> {
     await this.db
       .updateTable("star_catch.catch_runs")
-      .set({ status: outcome.status, step: outcome.step, error: outcome.error ?? null, finished_at: new Date() })
+      .set({
+        status: outcome.status,
+        step: outcome.step,
+        error: outcome.error ?? null,
+        finished_at: new Date(),
+        usage: outcome.usage ? toJsonb(outcome.usage) : null,
+      })
       .where("id", "=", String(id))
       .execute();
+  }
+
+  async recent(repos: string[], limit = 200): Promise<RunRecord[]> {
+    if (repos.length === 0) return [];
+    const rows = await this.db
+      .selectFrom("star_catch.catch_runs")
+      .select(["repo", "pr_number", "head_sha", "started_at", "finished_at", "status", "usage"])
+      .where("repo", "in", repos.map(repoKey))
+      .orderBy("started_at", "desc")
+      .orderBy("id", "desc")
+      .limit(limit)
+      .execute();
+    return rows.map((r) => ({
+      fullName: r.repo,
+      number: r.pr_number,
+      headSha: r.head_sha,
+      startedAt: r.started_at,
+      finishedAt: r.finished_at,
+      status: r.status,
+      usage: Array.isArray(r.usage) ? (r.usage as TokenUsage[]) : [],
+    }));
   }
 }
