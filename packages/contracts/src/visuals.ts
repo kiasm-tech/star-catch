@@ -26,6 +26,12 @@ export const TitleCardSchema = z.object({
   title: sentence,
   author: z.string().optional(),
   cut: z.enum(CUTS),
+  /** Since 0.10.0: the PR's head branch. */
+  branch: z.string().optional(),
+  /** Since 0.10.0: how big the PR is, lockfiles and generated files left out. */
+  size: z
+    .object({ files: z.number().int().nonnegative(), additions: z.number().int().nonnegative(), deletions: z.number().int().nonnegative() })
+    .optional(),
 });
 
 const SplitSide = z.object({ label, items: z.array(z.object({ id, text: sentence })).max(3) });
