@@ -8,6 +8,7 @@ import { declarationsOf, type Declaration } from "./declarations.js";
 import { diffTokens } from "./diff.js";
 import { parse, parserFor, type CodeLanguage, type ParseBudget } from "./parse.js";
 import { hashTokens, ownText, ownTokens, residueText, residueTokens, tokensOf, type Token } from "./tokens.js";
+import { membersOf } from "./members.js";
 
 /** One side of a declaration. Its `declaration.node` is valid until `compareCode` deletes the tree. */
 interface Side {
@@ -173,10 +174,14 @@ function unitsOf(
       baseBindings: before && bindingsOf(bindings, before.declaration, base!.found),
       headBindings: after && bindingsOf(bindings, after.declaration, head!.found),
     });
+    const beforeMembers = before ? membersOf(before.declaration.node) : null;
+    const afterMembers = after ? membersOf(after.declaration.node) : null;
+    const readable = (!before || beforeMembers) && (!after || afterMembers);
     const shared = {
       unitKind: "declaration" as const,
       before: clip(before?.code),
       after: clip(after?.code),
+      ...(readable && { members: { before: beforeMembers, after: afterMembers } }),
       span: { ...(before && { base: before.lines }), ...(after && { head: after.lines }) },
       references: after?.references ?? [],
     };
