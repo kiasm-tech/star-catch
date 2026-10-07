@@ -47,6 +47,17 @@ export const UnitLabelsSchema = z.object({
   source: LabelSourceSchema,
 });
 
+/** Members a declaration's shape lists, per side. */
+export const MAX_UNIT_MEMBERS = 60;
+
+/** A part of a declaration's shape: a field, a parameter, what it returns, a union alternative, an enum value. */
+export const MemberSchema = z.object({
+  name: z.string().min(1),
+  /** Empty for a union alternative or an enum value, which are their own name. */
+  type: z.string(),
+});
+export type Member = z.infer<typeof MemberSchema>;
+
 export const ChangeUnitSchema = z.object({
   /**
    * `${file}#${name}`. Members are qualified by their container (`Cart.total`), a whole-file
@@ -66,6 +77,13 @@ export const ChangeUnitSchema = z.object({
   /** The unit's own code, not the file's. */
   before: z.string().max(MAX_UNIT_CODE_CHARS).optional(),
   after: z.string().max(MAX_UNIT_CODE_CHARS).optional(),
+  /**
+   * Since 0.9.0: the declaration's shape, read from its syntax tree; null on a side it doesn't
+   * exist on. Absent when the shape can't be read (a constant, a statement, an unknown language).
+   */
+  members: z
+    .object({ before: z.array(MemberSchema).max(MAX_UNIT_MEMBERS).nullable(), after: z.array(MemberSchema).max(MAX_UNIT_MEMBERS).nullable() })
+    .optional(),
   labels: UnitLabelsSchema.optional(),
 });
 

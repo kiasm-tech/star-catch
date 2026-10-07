@@ -63,9 +63,6 @@ export const ArchitectureMorphSchema = z
 
 const Change = z.enum(["added", "removed", "changed"]);
 
-/** Members a contract item lists before "+N more". */
-export const MAX_CONTRACT_MEMBERS = 6;
-
 /** One part of a declaration that changed: a field, a parameter, what it returns, a union alternative. */
 const ContractMember = z.object({ id, name: label, before: sentence.nullable(), after: sentence.nullable(), change: Change });
 
@@ -80,10 +77,8 @@ export const ContractCardSchema = z
         after: sentence.nullable(),
         /** Since 0.9.0: whether the declaration itself is new, gone or changed. */
         change: Change.optional(),
-        /** Since 0.9.0: what changed inside it; absent when its shape couldn't be read. */
-        members: z.array(ContractMember).max(MAX_CONTRACT_MEMBERS).optional(),
-        /** Since 0.9.0: changed members past the ones listed. */
-        more: z.number().int().nonnegative().optional(),
+        /** Since 0.9.0: every member that changed inside it; absent when its shape couldn't be read. */
+        members: z.array(ContractMember).optional(),
       }),
     ),
   })
