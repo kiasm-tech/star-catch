@@ -3,6 +3,7 @@ import type { CatchStore, RunLog } from "../ports/catch-store.js";
 import type { JobQueue } from "../ports/job-queue.js";
 import type { RepoSettings } from "../ports/repo-settings.js";
 import type { SnapshotStore } from "../ports/snapshot-store.js";
+import type { UsageMeter } from "../ports/usage.js";
 import { buildCatch } from "./build-catch.js";
 import type { ContextOptions } from "./build-context.js";
 import type { ScriptPorts } from "./build-scripts.js";
@@ -16,6 +17,8 @@ export interface GenerateDeps {
   runs: RunLog;
   ports: ScriptPorts;
   options?: ContextOptions;
+  /** Counts the models' tokens; each run records what it used. */
+  meter?: UsageMeter;
   /** Where a saved catch goes to be commented on its PR; absent, no comment. */
   commentQueue?: Pick<JobQueue, "send">;
 }
@@ -24,7 +27,7 @@ export interface GenerateDeps {
  * A stored snapshot → its catch, saved under the head commit, with the run recorded. A failure is
  * recorded with the step it stopped at and thrown, so the queue tries again.
  */
-export async function generateCatch({ settings, snapshots, catches, runs, ports, options, commentQueue }: GenerateDeps, data: unknown): Promise<GenerateOutcome> {
+export async function generateCatch({ settings, snapshots, catches, runs, ports, options, commentQueue, meter }: GenerateDeps, data: unknown): Promise<GenerateOutcome> {
   const parsed = GenerateJobSchema.safeParse(data);
   if (!parsed.success) return "invalid";
   const job = parsed.data;
@@ -34,6 +37,9 @@ export async function generateCatch({ settings, snapshots, catches, runs, ports,
   if (snapshot === null) return "no-snapshot";
 
   const run = await runs.start(job);
+  // Whatever an earlier job left behind isn't this run's.
+  meter?.take();
+  const usage = () => (meter ? { usage: meter.take() } : {});
   let step = "build";
   try {
     const version = await buildCatch(snapshot, ports, options);
@@ -45,9 +51,9 @@ export async function generateCatch({ settings, snapshots, catches, runs, ports,
       await commentQueue.send(COMMENT_QUEUE.name, comment, { singletonKey: ingestKey(comment) });
     }
   } catch (error) {
-    await runs.finish(run, { status: "failed", step, error: error instanceof Error ? error.message : String(error) });
+    await runs.finish(run, { status: "failed", step, error: error instanceof Error ? error.message : String(error), ...usage() });
     throw error;
   }
-  await runs.finish(run, { status: "done", step: "save" });
+  await runs.finish(run, { status: "done", step: "save", ...usage() });
   return "generated";
 }

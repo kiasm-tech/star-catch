@@ -2,6 +2,7 @@ import { catchIdOf, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
 import { loadSyntheticFixtures } from "@star-catch/testkit";
 import { describe, expect, it, vi } from "vitest";
 import { mockClassifier } from "../classifier.js";
+import { memoryMeter } from "../ports/usage.js";
 import type { ScriptWriter } from "../ports/script-writer.js";
 import { templateWriter } from "../script/template-writer.js";
 import { generateCatch } from "./generate-catch.js";
@@ -11,7 +12,7 @@ const job = { fullName: snapshot.fullName, number: snapshot.number, headSha: sna
 
 function setUp({ enabled = true, stored = true, writer = templateWriter }: { enabled?: boolean; stored?: boolean; writer?: ScriptWriter } = {}) {
   const saved: { version: CatchVersion; headSha: string }[] = [];
-  const runs = { start: vi.fn(async () => 1), finish: vi.fn(async () => {}) };
+  const runs = { start: vi.fn(async () => 1), finish: vi.fn(async () => {}), recent: async () => [] };
   const deps = {
     settings: { isEnabled: async () => enabled },
     snapshots: { has: async () => stored, save: async () => {}, find: async () => (stored ? snapshot : null) },
@@ -23,6 +24,23 @@ function setUp({ enabled = true, stored = true, writer = templateWriter }: { ena
 }
 
 describe("generateCatch", () => {
+  it("records the tokens the run used, and only those", async () => {
+    const { deps, runs } = setUp();
+    const meter = memoryMeter();
+    meter.record({ step: "write", model: "luna", input: 9, output: 9 });
+    const classifier = {
+      ...mockClassifier,
+      classify: async (...args: Parameters<typeof mockClassifier.classify>) => {
+        meter.record({ step: "classify", model: "luna", input: 100, output: 40 });
+        return mockClassifier.classify(...args);
+      },
+    };
+    expect(await generateCatch({ ...deps, ports: { ...deps.ports, classifier }, meter }, job)).toBe("generated");
+    const [, outcome] = runs.finish.mock.calls[0] as unknown as [number, { usage: { step: string; calls: number; input: number; output: number }[] }];
+    // The write left over from before the run isn't counted.
+    expect(outcome.usage).toEqual([{ step: "classify", model: "luna", calls: 1, input: 100, output: 40 }]);
+  });
+
   it("builds the stored snapshot's catch, saves it under the head commit and records the run", async () => {
     const { deps, saved, runs } = setUp();
     expect(await generateCatch(deps, job)).toBe("generated");

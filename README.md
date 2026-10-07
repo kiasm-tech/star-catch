@@ -24,6 +24,7 @@ DATABASE_URL=postgres://star_catch:star_catch@localhost:5432/star_catch pnpm cli
 DATABASE_URL=… GITHUB_WEBHOOK_SECRET=dev pnpm intake           # webhook receiver on :8080
 DATABASE_URL=… STAR_CATCH_REPOS=pmndrs/zustand STAR_CATCH_MOCK_GITHUB=true STAR_CATCH_MOCK_LLM=true pnpm worker --watch
 DATABASE_URL=… STAR_CATCH_API_TOKEN=dev PORT=8081 pnpm api   # what Crux reads, on :8081
+curl -H "authorization: Bearer dev" "localhost:8081/v1/usage?repos=pmndrs/zustand"   # tokens each run used
 GITHUB_WEBHOOK_SECRET=dev pnpm replay fixtures/webhooks/pmndrs__zustand__3469.opened.json
 ```
 

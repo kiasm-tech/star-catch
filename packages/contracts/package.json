@@ -1,6 +1,6 @@
 {
   "name": "@kiasm-tech/star-catch-contracts",
-  "version": "0.8.0",
+  "version": "0.10.0",
   "description": "Schemas shared by the Star Catch backend and Crux: snapshots, contexts, catches, jobs.",
   "type": "module",
   "exports": {

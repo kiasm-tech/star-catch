@@ -1,11 +1,12 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { COMMENT_QUEUE, GENERATE_QUEUE, INGEST_QUEUE, commentOnPullRequest, generateCatch, ingestPullRequest } from "@star-catch/pipeline";
+import { COMMENT_QUEUE, GENERATE_QUEUE, INGEST_QUEUE, PR_STATE_QUEUE, commentOnPullRequest, generateCatch, ingestPullRequest, updatePrState } from "@star-catch/pipeline";
 import type { Log, Worker } from "./compose.js";
 
 /** Each queue this worker takes jobs from, and what a job there does. */
 const CONSUMERS: Record<string, (worker: Worker, data: unknown) => Promise<string>> = {
   [INGEST_QUEUE.name]: (worker, data) => ingestPullRequest(worker.ingest, data),
   [GENERATE_QUEUE.name]: (worker, data) => generateCatch(worker.generate, data),
+  [PR_STATE_QUEUE.name]: (worker, data) => updatePrState({ catches: worker.generate.catches }, data),
   [COMMENT_QUEUE.name]: async (worker, data) => (worker.comment ? commentOnPullRequest(worker.comment, data) : "comments-off"),
 };
 
@@ -21,7 +22,8 @@ export interface RunOptions {
 function jobOf(data: unknown): Record<string, unknown> {
   if (typeof data !== "object" || data === null) return {};
   if ("deliveryId" in data) return { deliveryId: data.deliveryId };
-  return "fullName" in data && "headSha" in data ? { pr: `${data.fullName}@${String(data.headSha).slice(0, 7)}` } : {};
+  if ("fullName" in data && "headSha" in data) return { pr: `${data.fullName}@${String(data.headSha).slice(0, 7)}` };
+  return "fullName" in data && "number" in data ? { pr: `${data.fullName}#${String(data.number)}` } : {};
 }
 
 /** Runs every waiting job; returns how many ran. */

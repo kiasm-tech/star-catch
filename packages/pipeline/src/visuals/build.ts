@@ -14,6 +14,7 @@ import {
 import { CHAPTER_TITLES } from "../script/sections.js";
 import { FactIndex } from "../script/facts-index.js";
 import { lanes, rows, stack } from "./layout.js";
+import { contractShape } from "./members.js";
 import { clip, humanize, plainTitle, testTitle } from "./words.js";
 
 /** What a visual may say about the PR itself; never its state (open or merged). */
@@ -297,6 +298,7 @@ const contractCard: Builder = (s, _input, flags) => {
         label: routes.get(u.id)?.route ? routeLabel(routes.get(u.id)!, u) : humanize(u.name),
         before: firstLine(u.before),
         after: firstLine(u.after),
+        ...contractShape(u),
       })),
     },
   };

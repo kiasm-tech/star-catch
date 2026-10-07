@@ -75,6 +75,18 @@ describe("receiveWebhook", () => {
     expect(await receive("d-1", "pull_request", opened({ action }))).toMatchObject({ outcome: "queued" });
   });
 
+  it.each([
+    ["merged", { merged: true, merged_at: "2026-10-07T10:00:00Z", closed_at: "2026-10-07T10:00:00Z" }],
+    ["closed", { merged: false, merged_at: null, closed_at: "2026-10-07T11:00:00Z" }],
+  ])("queues the new state of a %s pull request, not an ingest", async (state, fields) => {
+    const { receive, queue } = setUp();
+    const payload = opened({ action: "closed", pull_request: { ...opened().pull_request, ...fields } });
+    expect(await receive("d-4", "pull_request", payload)).toEqual({ outcome: "queued", queue: "star-catch.pr-state" });
+    expect(queue.sent).toEqual([
+      { queue: "star-catch.pr-state", data: { fullName: "Acme/Shop", number: 7, state, at: state === "merged" ? "2026-10-07T10:00:00Z" : "2026-10-07T11:00:00Z" } },
+    ]);
+  });
+
   it("passes Crux's events on untouched", async () => {
     const { receive, queue } = setUp();
     const payload = { action: "created", installation: { id: 42 }, sender: { login: "ada" } };
@@ -84,7 +96,6 @@ describe("receiveWebhook", () => {
 
   it.each([
     ["pull_request", opened({ action: "synchronize" })],
-    ["pull_request", opened({ action: "closed" })],
     ["issue_comment", { action: "created", comment: { body: "@star-catch update" } }],
     ["push", { ref: "refs/heads/main" }],
     ["pull_request", { action: "opened" }],

@@ -61,11 +61,28 @@ export const ArchitectureMorphSchema = z
   .object({ nodes: z.array(MorphNode), before: z.array(Edge), after: z.array(Edge) })
   .refine(...atMost((d: { nodes: unknown[] }) => d.nodes.length, "parts"));
 
-export const ContractCardSchema = z
-  .object({ items: z.array(z.object({ id, label, before: sentence.nullable(), after: sentence.nullable() })) })
-  .refine(...atMost((d: { items: unknown[] }) => d.items.length, "items"));
-
 const Change = z.enum(["added", "removed", "changed"]);
+
+/** One part of a declaration that changed: a field, a parameter, what it returns, a union alternative. */
+const ContractMember = z.object({ id, name: label, before: sentence.nullable(), after: sentence.nullable(), change: Change });
+
+export const ContractCardSchema = z
+  .object({
+    items: z.array(
+      z.object({
+        id,
+        label,
+        /** The declaration's first line, before and after: what a reader without `members` shows. */
+        before: sentence.nullable(),
+        after: sentence.nullable(),
+        /** Since 0.9.0: whether the declaration itself is new, gone or changed. */
+        change: Change.optional(),
+        /** Since 0.9.0: every member that changed inside it; absent when its shape couldn't be read. */
+        members: z.array(ContractMember).optional(),
+      }),
+    ),
+  })
+  .refine(...atMost((d: { items: unknown[] }) => d.items.length, "items"));
 export const DataModelDiffSchema = z
   .object({
     entities: z.array(z.object({ id, label, change: Change, fields: z.array(z.object({ id, name: label, change: Change })) })),

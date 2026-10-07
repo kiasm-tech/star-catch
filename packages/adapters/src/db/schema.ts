@@ -41,6 +41,7 @@ export interface CatchRunsTable {
   status: ColumnType<"running" | "done" | "failed", never, "done" | "failed">;
   step: string | null;
   error: string | null;
+  usage: ColumnType<unknown, never, string | null>;
 }
 
 export interface RepoSettingsTable {

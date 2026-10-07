@@ -1,4 +1,4 @@
-import { PostgresCatchStore, PostgresRepoSettings, connect } from "@star-catch/adapters";
+import { PostgresCatchStore, PostgresRepoSettings, PostgresRunLog, connect } from "@star-catch/adapters";
 import type { Hono } from "hono";
 import { createApp } from "./http.js";
 
@@ -21,6 +21,7 @@ export async function compose(env: Env, log = jsonLog): Promise<Api> {
     token: env.STAR_CATCH_API_TOKEN!,
     catches: new PostgresCatchStore(db),
     settings: new PostgresRepoSettings(db, env.STAR_CATCH_REPOS),
+    runs: new PostgresRunLog(db),
     log,
   });
   return {

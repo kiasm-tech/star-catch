@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Llm, LlmRequest } from "@star-catch/pipeline";
+import type { Llm, LlmRequest, UsageMeter } from "@star-catch/pipeline";
 
 export interface AnthropicOptions {
   apiKey: string;
@@ -7,6 +7,10 @@ export interface AnthropicOptions {
   model: string;
   maxTokens?: number;
   fetch?: typeof fetch;
+  /** Told the tokens of every call, including ones whose answer is then rejected. */
+  meter?: UsageMeter;
+  /** What the calls are for, in the meter: `classify` or `write`. */
+  step?: string;
 }
 
 /**
@@ -35,6 +39,13 @@ export class AnthropicLlm implements Llm {
         { signal },
       )
       .finalMessage();
+    const { usage } = message;
+    this.options.meter?.record({
+      step: this.options.step ?? "model",
+      model: this.options.model,
+      input: usage.input_tokens + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0),
+      output: usage.output_tokens,
+    });
     if (message.stop_reason === "max_tokens") throw new Error(`Classifier answer cut off at ${this.options.maxTokens ?? 16_000} tokens`);
     if (message.stop_reason === "refusal") throw new Error("The model refused to classify");
     const text = message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("");

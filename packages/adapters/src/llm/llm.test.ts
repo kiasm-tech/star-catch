@@ -1,4 +1,5 @@
 import { RESPONSE_JSON_SCHEMA } from "@star-catch/changes";
+import { memoryMeter } from "@star-catch/pipeline";
 import { describe, expect, it } from "vitest";
 import { MockLlm } from "./llm.mock.js";
 import { OpenAiLlm } from "./llm.openai.js";
@@ -46,6 +47,12 @@ function openAiResponse(output: unknown[], incomplete: string | null = null) {
 }
 
 describe("AnthropicLlm", () => {
+  it("tells the meter the call's tokens", async () => {
+    const meter = memoryMeter();
+    await new AnthropicLlm({ apiKey: "k", model: "claude-haiku-4-5", fetch: fakeFetch(anthropicStream(JSON.stringify(answer))).fetch, meter, step: "classify" }).completeJson(request);
+    expect(meter.take()).toEqual([{ step: "classify", model: "claude-haiku-4-5", calls: 1, input: 10, output: 5 }]);
+  });
+
   it("asks for structured output, with no forced tool or temperature, and parses the answer", async () => {
     const { fetch, calls } = fakeFetch(anthropicStream(JSON.stringify(answer)));
     const llm = new AnthropicLlm({ apiKey: "k", model: "claude-haiku-4-5", fetch });
@@ -86,6 +93,13 @@ describe("OpenAiLlm", () => {
       tools: [{ type: "function", name: "label", strict: true, parameters: RESPONSE_JSON_SCHEMA }],
       tool_choice: { type: "function", name: "label" },
     });
+  });
+
+  it("tells the meter each call's tokens, a cut-off one too", async () => {
+    const meter = memoryMeter();
+    await new OpenAiLlm({ apiKey: "k", model: "luna", fetch: fakeFetch(openAiResponse([call])).fetch, meter, step: "write" }).completeJson(request);
+    await expect(new OpenAiLlm({ apiKey: "k", model: "luna", fetch: fakeFetch(openAiResponse([call], "max_output_tokens")).fetch, meter, step: "write" }).completeJson(request)).rejects.toThrow();
+    expect(meter.take()).toEqual([{ step: "write", model: "luna", calls: 2, input: 20, output: 10 }]);
   });
 
   it("fails when the answer is cut off or missing", async () => {
