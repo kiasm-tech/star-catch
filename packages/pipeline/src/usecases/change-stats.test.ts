@@ -1,6 +1,6 @@
 import { snapshotOf } from "@star-catch/testkit";
 import { describe, expect, it } from "vitest";
-import { changeStatsOf, kindOf } from "./change-stats.js";
+import { changeStatsOf, kindOf, qualityOf, type QualityContext } from "./change-stats.js";
 
 const file = (filename: string, status: string, additions: number, deletions: number) => ({ filename, status, additions, deletions });
 
@@ -66,5 +66,57 @@ describe("the change by the numbers", () => {
     const stats = changeStatsOf(pr, pr.files.slice(0, 1));
     expect(stats.files).toEqual({ added: 0, modified: 1, removed: 0, renamed: 0 });
     expect(stats.kinds).toEqual([{ kind: "code", additions: 86, deletions: 9 }]);
+  });
+});
+
+const unit = (file: string, name: string, kind: string, component: string, risks: string[] = [], verdict = "behavioural") =>
+  ({ id: `${file}#${name}`, file, name, unitKind: "declaration", language: "typescript", verdict, changeType: "added", refactorings: [], component, labels: { kind, risks } }) as unknown as QualityContext["units"][number];
+
+const units = [
+  unit("limits/limiter.ts", "allowRequest", "logic", "limits"),
+  unit("limits/limiter.ts", "limitFor", "logic", "limits"),
+  unit("app/api/orders/route.ts", "POST", "interface", "api"),
+  unit("store/usage.ts", "usageOf", "data", "store", ["dataMigration"]),
+  unit("limits/limiter.test.ts", "shares a limit", "test", "limits"),
+];
+const links = [
+  { from: "limits/limiter.test.ts#shares a limit", to: "limits/limiter.ts#allowRequest", type: "covers" },
+  { from: "limits/limiter.test.ts#shares a limit", to: "limits/limiter.ts#limitFor", type: "covers" },
+] as QualityContext["links"];
+const sentences = [{ id: "description:0", origin: "description", text: "Keys shared one quota each.", class: "problem", numbers: [] }] as QualityContext["sentences"];
+
+describe("the quality", () => {
+  it("measures the PR and adds the areas up to a score and a grade", () => {
+    const body = `${"Usage now counts per organisation instead of per key. ".repeat(6)}Closes #812.`;
+    const q = qualityOf({ ...pr, body }, pr.files, { units, links, sentences });
+    expect(q).toMatchObject({
+      sizeClass: "S",
+      coverage: { tested: 2, testable: 4 },
+      testRatio: 0.51,
+      focus: { parts: 3, level: "moderate" },
+      largestShare: 0.5,
+      description: { why: true, issue: true },
+      commits: { total: 4, conventional: 4, fixups: 0 },
+      breaking: { count: 0, docs: true },
+    });
+    expect(Object.fromEntries(q.areas.map((a) => [a.area, a.points]))).toEqual({ tests: 15, risk: 16, size: 15, focus: 7, context: 15, commits: 10 });
+    expect(q).toMatchObject({ score: 78, grade: "B" });
+  });
+
+  it("gives full test points when nothing calls for a test, and none for a PR without words", () => {
+    const q = qualityOf({ ...pr, body: null, linkedIssues: [] }, pr.files, { units: [unit("README.md", "README", "documentation", "")], links: [], sentences: [] });
+    expect(q.coverage).toBeNull();
+    expect(q.areas.find((a) => a.area === "tests")!.points).toBe(30);
+    expect(q.areas.find((a) => a.area === "context")!.points).toBe(0);
+  });
+
+  it("costs points for breaking changes, less when docs change too, and for fixup commits", () => {
+    const breaking = [unit("api/v1.ts", "getOrder", "interface", "api", ["breaking"])];
+    const noDocs = qualityOf(pr, pr.files.filter((f) => !f.filename.endsWith(".md")), { units: breaking, links: [], sentences });
+    const docs = qualityOf(pr, pr.files, { units: breaking, links: [], sentences });
+    expect([noDocs.areas[1]!.points, docs.areas[1]!.points]).toEqual([12, 16]);
+    const messy = qualityOf({ ...pr, commits: [...pr.commits, { sha: "b1b1b1b", message: "fixup! feat: count per org", author: "ada" }] }, pr.files, { units, links, sentences });
+    expect(messy.commits).toEqual({ total: 5, conventional: 4, fixups: 1 });
+    expect(messy.areas.find((a) => a.area === "commits")!.points).toBe(5);
   });
 });

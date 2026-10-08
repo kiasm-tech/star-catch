@@ -22,7 +22,7 @@ export async function buildScripts(
   const size = { files: counted.length, additions: counted.reduce((n, f) => n + f.additions, 0), deletions: counted.reduce((n, f) => n + f.deletions, 0) };
   return generateScripts(
     context,
-    { fullName: pr.fullName, number: pr.number, title: pr.title, ...(pr.author && { author: pr.author }), branch: pr.headRef, size, change: changeStatsOf(pr, counted) },
+    { fullName: pr.fullName, number: pr.number, title: pr.title, ...(pr.author && { author: pr.author }), branch: pr.headRef, size, change: changeStatsOf(pr, counted, context) },
     { writer, open: pr.state === "open", ...(options.instruction && { instruction: options.instruction }), ...(options.foldThin && { foldThin: true }), ...(options.signal && { signal: options.signal }) },
   );
 }
