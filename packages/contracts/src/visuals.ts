@@ -26,6 +26,34 @@ const lines = { additions: z.number().int().nonnegative(), deletions: z.number()
 /** Kinds of file a change is counted by: tests, migrations, docs and config apart from the code. */
 export const FILE_KINDS = ["code", "tests", "migrations", "docs", "config"] as const;
 
+export const SIZE_CLASSES = ["XS", "S", "M", "L", "XL"] as const;
+export const QUALITY_GRADES = ["A", "B", "C", "D"] as const;
+export const QUALITY_AREAS = ["tests", "risk", "size", "focus", "context", "commits"] as const;
+
+/**
+ * How easy a PR is to review and trust, by fixed rules over its head commit (never CI or review
+ * state, so it reads the same before and after merge): each metric, and the score they add up to.
+ */
+export const QualitySchema = z.object({
+  score: z.number().int().min(0).max(100),
+  grade: z.enum(QUALITY_GRADES),
+  /** The points each area earned, out of its maximum; they add up to the score. */
+  areas: z.array(z.object({ area: z.enum(QUALITY_AREAS), points: z.number().int().nonnegative(), max: z.number().int().positive() })).length(QUALITY_AREAS.length),
+  sizeClass: z.enum(SIZE_CLASSES),
+  /** Changed code a changed test covers; null when nothing in the change calls for a test. */
+  coverage: z.object({ tested: z.number().int().nonnegative(), testable: z.number().int().positive() }).nullable(),
+  /** Test lines added per code line added; null when no code lines were added. */
+  testRatio: z.number().nonnegative().nullable(),
+  focus: z.object({ parts: z.number().int().nonnegative(), level: z.enum(["focused", "moderate", "spread"]) }),
+  /** The largest file's share of the changed lines, 0–1; null for an empty change. */
+  largestShare: z.number().min(0).max(1).nullable(),
+  description: z.object({ words: z.number().int().nonnegative(), why: z.boolean(), issue: z.boolean() }),
+  commits: z.object({ total: z.number().int().nonnegative(), conventional: z.number().int().nonnegative(), fixups: z.number().int().nonnegative() }),
+  breaking: z.object({ count: z.number().int().nonnegative(), docs: z.boolean() }),
+});
+
+export type Quality = z.infer<typeof QualitySchema>;
+
 /** A PR's change by the numbers: files by status and kind, the biggest file, its commits and their authors. */
 export const ChangeStatsSchema = z.object({
   files: z.object({ added: z.number().int().nonnegative(), modified: z.number().int().nonnegative(), removed: z.number().int().nonnegative(), renamed: z.number().int().nonnegative() }),
@@ -38,6 +66,7 @@ export const ChangeStatsSchema = z.object({
   labels: z.array(z.string()).max(8),
   /** Issues the PR says it closes. */
   closes: z.array(z.number().int().positive()).max(5),
+  quality: QualitySchema.optional(),
 });
 
 export type ChangeStats = z.infer<typeof ChangeStatsSchema>;
