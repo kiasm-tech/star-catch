@@ -21,6 +21,51 @@ const Edge = z.object({ id, from: id, to: id, label: label.optional() });
 const atMost = <T>(count: (data: T) => number, what: string) =>
   [(data: T) => count(data) <= MAX_PRIMARY, { message: `at most ${MAX_PRIMARY} ${what}` }] as const;
 
+const lines = { additions: z.number().int().nonnegative(), deletions: z.number().int().nonnegative() };
+
+/** Kinds of file a change is counted by: tests, migrations, docs and config apart from the code. */
+export const FILE_KINDS = ["code", "tests", "migrations", "docs", "config"] as const;
+
+export const SIZE_CLASSES = ["XS", "S", "M", "L", "XL"] as const;
+export const QUALITY_GRADES = ["A", "B", "C", "D"] as const;
+export const QUALITY_AREAS = ["context", "size", "focus", "commits"] as const;
+
+/**
+ * How well the PR itself is put together, by fixed rules over its head commit (never CI or review
+ * state, so it reads the same before and after merge): each metric, and the score they add up to.
+ */
+export const QualitySchema = z.object({
+  score: z.number().int().min(0).max(100),
+  grade: z.enum(QUALITY_GRADES),
+  /** The points each area earned, out of its maximum; they add up to the score. */
+  areas: z.array(z.object({ area: z.enum(QUALITY_AREAS), points: z.number().int().nonnegative(), max: z.number().int().positive() })).length(QUALITY_AREAS.length),
+  sizeClass: z.enum(SIZE_CLASSES),
+  focus: z.object({ parts: z.number().int().nonnegative(), level: z.enum(["focused", "moderate", "spread"]) }),
+  /** The largest file's share of the changed lines, 0–1; null for an empty change. */
+  largestShare: z.number().min(0).max(1).nullable(),
+  description: z.object({ words: z.number().int().nonnegative(), why: z.boolean(), issue: z.boolean() }),
+  commits: z.object({ total: z.number().int().nonnegative(), conventional: z.number().int().nonnegative(), fixups: z.number().int().nonnegative() }),
+});
+
+export type Quality = z.infer<typeof QualitySchema>;
+
+/** A PR's change by the numbers: files by status and kind, the biggest file, its commits and their authors. */
+export const ChangeStatsSchema = z.object({
+  files: z.object({ added: z.number().int().nonnegative(), modified: z.number().int().nonnegative(), removed: z.number().int().nonnegative(), renamed: z.number().int().nonnegative() }),
+  /** Kinds with any lines, most lines first. */
+  kinds: z.array(z.object({ kind: z.enum(FILE_KINDS), ...lines })).max(FILE_KINDS.length),
+  largest: z.object({ file: z.string(), ...lines }).optional(),
+  commits: z.number().int().nonnegative(),
+  /** Commit authors, most commits first; empty when the commits don't say who made them. */
+  contributors: z.array(z.object({ login: z.string(), commits: z.number().int().nonnegative() })).max(10),
+  labels: z.array(z.string()).max(8),
+  /** Issues the PR says it closes. */
+  closes: z.array(z.number().int().positive()).max(5),
+  quality: QualitySchema.optional(),
+});
+
+export type ChangeStats = z.infer<typeof ChangeStatsSchema>;
+
 export const TitleCardSchema = z.object({
   pr: z.object({ fullName: z.string(), number: z.number().int().positive() }),
   title: sentence,
@@ -32,6 +77,8 @@ export const TitleCardSchema = z.object({
   size: z
     .object({ files: z.number().int().nonnegative(), additions: z.number().int().nonnegative(), deletions: z.number().int().nonnegative() })
     .optional(),
+  /** Since 0.11.0: what the size is made of, and who made it. Same files as `size`. */
+  change: ChangeStatsSchema.optional(),
 });
 
 const SplitSide = z.object({ label, items: z.array(z.object({ id, text: sentence })).max(3) });

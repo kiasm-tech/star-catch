@@ -302,6 +302,7 @@ export async function fetchPullRequestSnapshot(
     commits: rawCommits.slice(0, LIMITS.commits).map((c) => ({
       sha: c.sha,
       message: clip(c.commit.message, LIMITS.commitMessageChars) ?? "",
+      author: c.author?.login ?? c.commit.author?.name ?? null,
     })),
     linkedIssues,
     ciConclusion,

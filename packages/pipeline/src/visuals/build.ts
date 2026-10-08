@@ -2,6 +2,7 @@
 import {
   MAX_FILES,
   MAX_PRIMARY,
+  type ChangeStats,
   type ChangeUnit,
   type Context,
   type Cut,
@@ -26,6 +27,8 @@ export interface PrInfo {
   branch?: string;
   /** Lockfiles and generated files left out. */
   size?: { files: number; additions: number; deletions: number };
+  /** What the size is made of, and who made it. */
+  change?: ChangeStats;
 }
 
 export interface VisualInput {
@@ -155,6 +158,7 @@ const titleCard: Builder = (_s, { pr, cut }) => ({
     ...(pr.author && { author: pr.author }),
     ...(pr.branch && { branch: pr.branch }),
     ...(pr.size && { size: pr.size }),
+    ...(pr.change && { change: pr.change }),
     cut,
   },
 });
