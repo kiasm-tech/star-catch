@@ -58,7 +58,8 @@ export const PullRequestSnapshotSchema = z.object({
   /** Some patches, contents or list entries were dropped to fit the limits. */
   truncated: z.boolean(),
   files: z.array(PullRequestSnapshotFileSchema),
-  commits: z.array(z.object({ sha: z.string(), message: z.string() })),
+  /** `author` since 0.11.0: the GitHub login, or the commit's own name when it has no account. */
+  commits: z.array(z.object({ sha: z.string(), message: z.string(), author: z.string().nullable().optional() })),
   linkedIssues: z.array(
     z.object({
       number: z.number().int().positive(),
