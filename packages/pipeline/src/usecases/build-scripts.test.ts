@@ -5,7 +5,7 @@ import { templateWriter } from "../script/template-writer.js";
 import { buildScripts } from "./build-scripts.js";
 
 describe("buildScripts", () => {
-  it("puts the branch and the PR's size on the title card, the lockfile left out", async () => {
+  it("puts the branch, the PR's size and what it's made of on the title card, the lockfile left out", async () => {
     const snapshot = snapshotOf(
       { fullName: "acme/shop", number: 7 },
       {
@@ -15,10 +15,16 @@ describe("buildScripts", () => {
           { filename: "README.md", status: "modified", additions: 3, deletions: 1 },
           { filename: "package-lock.json", status: "modified", additions: 1600, deletions: 20 },
         ],
+        commits: [{ sha: "c0ffee1", message: "feat: hours", author: "ada" }],
       },
     );
     const { technical } = await buildScripts(snapshot, { classifier: mockClassifier, writer: templateWriter });
     const title = technical!.chapters[0]!.sections[0]!.visual;
     expect(title).toMatchObject({ type: "titleCard", data: { branch: "feat/opening-hours", size: { files: 2, additions: 43, deletions: 1 } } });
+    expect(title.type === "titleCard" && title.data.change).toMatchObject({
+      files: { added: 1, modified: 1, removed: 0, renamed: 0 },
+      kinds: [{ kind: "code", additions: 40, deletions: 0 }, { kind: "docs", additions: 3, deletions: 1 }],
+      contributors: [{ login: "ada", commits: 1 }],
+    });
   });
 });

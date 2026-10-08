@@ -17,6 +17,7 @@ export {
   type Unit,
 } from "./schema.js";
 export { toAnalyzeInput } from "./input.js";
+export { triage } from "./triage.js";
 export type { Classifier, LabelCache } from "./classify/port.js";
 export {
   ClassifyItemSchema,
