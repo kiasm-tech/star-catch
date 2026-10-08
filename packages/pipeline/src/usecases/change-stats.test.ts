@@ -69,54 +69,39 @@ describe("the change by the numbers", () => {
   });
 });
 
-const unit = (file: string, name: string, kind: string, component: string, risks: string[] = [], verdict = "behavioural") =>
-  ({ id: `${file}#${name}`, file, name, unitKind: "declaration", language: "typescript", verdict, changeType: "added", refactorings: [], component, labels: { kind, risks } }) as unknown as QualityContext["units"][number];
+const unit = (file: string, name: string, component: string) =>
+  ({ id: `${file}#${name}`, file, name, unitKind: "declaration", language: "typescript", verdict: "behavioural", changeType: "added", refactorings: [], component }) as unknown as QualityContext["units"][number];
 
-const units = [
-  unit("limits/limiter.ts", "allowRequest", "logic", "limits"),
-  unit("limits/limiter.ts", "limitFor", "logic", "limits"),
-  unit("app/api/orders/route.ts", "POST", "interface", "api"),
-  unit("store/usage.ts", "usageOf", "data", "store", ["dataMigration"]),
-  unit("limits/limiter.test.ts", "shares a limit", "test", "limits"),
-];
-const links = [
-  { from: "limits/limiter.test.ts#shares a limit", to: "limits/limiter.ts#allowRequest", type: "covers" },
-  { from: "limits/limiter.test.ts#shares a limit", to: "limits/limiter.ts#limitFor", type: "covers" },
-] as QualityContext["links"];
+const units = [unit("limits/limiter.ts", "allowRequest", "limits"), unit("app/api/orders/route.ts", "POST", "api"), unit("store/usage.ts", "usageOf", "store")];
 const sentences = [{ id: "description:0", origin: "description", text: "Keys shared one quota each.", class: "problem", numbers: [] }] as QualityContext["sentences"];
+const body = `${"Usage now counts per organisation instead of per key. ".repeat(6)}Closes #812.`;
+const points = (q: ReturnType<typeof qualityOf>) => Object.fromEntries(q.areas.map((a) => [a.area, `${a.points}/${a.max}`]));
 
 describe("the quality", () => {
-  it("measures the PR and adds the areas up to a score and a grade", () => {
-    const body = `${"Usage now counts per organisation instead of per key. ".repeat(6)}Closes #812.`;
-    const q = qualityOf({ ...pr, body }, pr.files, { units, links, sentences });
+  it("measures the PR itself and adds the areas up to a score and a grade", () => {
+    const q = qualityOf({ ...pr, body }, pr.files, { units, sentences });
     expect(q).toMatchObject({
       sizeClass: "S",
-      coverage: { tested: 2, testable: 4 },
-      testRatio: 0.51,
       focus: { parts: 3, level: "moderate" },
       largestShare: 0.5,
-      description: { why: true, issue: true },
+      description: { words: 56, why: true, issue: true },
       commits: { total: 4, conventional: 4, fixups: 0 },
-      breaking: { count: 0, docs: true },
     });
-    expect(Object.fromEntries(q.areas.map((a) => [a.area, a.points]))).toEqual({ tests: 15, risk: 16, size: 15, focus: 7, context: 15, commits: 10 });
-    expect(q).toMatchObject({ score: 78, grade: "B" });
+    expect(points(q)).toEqual({ context: "35/35", size: "25/25", focus: "14/20", commits: "20/20" });
+    expect(q).toMatchObject({ score: 94, grade: "A" });
   });
 
-  it("gives full test points when nothing calls for a test, and none for a PR without words", () => {
-    const q = qualityOf({ ...pr, body: null, linkedIssues: [] }, pr.files, { units: [unit("README.md", "README", "documentation", "")], links: [], sentences: [] });
-    expect(q.coverage).toBeNull();
-    expect(q.areas.find((a) => a.area === "tests")!.points).toBe(30);
-    expect(q.areas.find((a) => a.area === "context")!.points).toBe(0);
+  it("gives no context points to a PR without words or an issue", () => {
+    const q = qualityOf({ ...pr, body: null, linkedIssues: [] }, pr.files, { units, sentences: [] });
+    expect(q.description).toEqual({ words: 0, why: false, issue: false });
+    expect(points(q).context).toBe("0/35");
   });
 
-  it("costs points for breaking changes, less when docs change too, and for fixup commits", () => {
-    const breaking = [unit("api/v1.ts", "getOrder", "interface", "api", ["breaking"])];
-    const noDocs = qualityOf(pr, pr.files.filter((f) => !f.filename.endsWith(".md")), { units: breaking, links: [], sentences });
-    const docs = qualityOf(pr, pr.files, { units: breaking, links: [], sentences });
-    expect([noDocs.areas[1]!.points, docs.areas[1]!.points]).toEqual([12, 16]);
-    const messy = qualityOf({ ...pr, commits: [...pr.commits, { sha: "b1b1b1b", message: "fixup! feat: count per org", author: "ada" }] }, pr.files, { units, links, sentences });
+  it("costs focus points for a spread change carried by one file, and commit points for fixups", () => {
+    const spread = ["a", "b", "c", "d", "e"].map((c) => unit(`${c}/x.ts`, "x", c));
+    expect(points(qualityOf(pr, pr.files.slice(0, 2), { units: spread, sentences })).focus).toBe("4/20");
+    const messy = qualityOf({ ...pr, commits: [...pr.commits, { sha: "b1b1b1b", message: "fixup! feat: count per org", author: "ada" }] }, pr.files, { units, sentences });
     expect(messy.commits).toEqual({ total: 5, conventional: 4, fixups: 1 });
-    expect(messy.areas.find((a) => a.area === "commits")!.points).toBe(5);
+    expect(points(messy).commits).toBe("11/20");
   });
 });
