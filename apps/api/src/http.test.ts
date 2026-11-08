@@ -172,6 +172,27 @@ describe("api", () => {
       expect((await put(setUp(rows()).app, { cut: "technical", sectionId: spoken().id, narration: "Hi." }, "acme__shop__1")).status).toBe(404);
     });
 
+    it("rewords a section's picture, and refuses one that changed more than its words", async () => {
+      const section = spoken();
+      const visual = section.visual;
+      const label = (v: typeof visual): typeof visual => JSON.parse(JSON.stringify(v).replace(/"label":"[^"]*"/, '"label":"Reworded"'));
+      const visualPut = (app: ReturnType<typeof setUp>["app"], body: unknown) =>
+        app.request(`/v1/catches/${draft.catchId}/visual`, { method: "PUT", headers: json, body: JSON.stringify(body) });
+
+      const { app, logs } = setUp(rows());
+      const res = await visualPut(app, { cut: "technical", sectionId: section.id, visual: label(visual) });
+      expect(res.status).toBe(200);
+      const body = StoredCatchSchema.parse(await res.json());
+      expect(body.version.technical!.chapters.flatMap((c) => c.sections).find((s) => s.id === section.id)!.visual).toEqual(label(visual));
+      expect(logs).toEqual([{ outcome: "visual-edited", catchId: draft.catchId }]);
+
+      const moved = JSON.parse(JSON.stringify(visual).replace(/"id":"[^"]*"/, '"id":"elsewhere"'));
+      const refused = await visualPut(setUp(rows()).app, { cut: "technical", sectionId: section.id, visual: moved });
+      expect(refused.status).toBe(422);
+      expect(EditErrorSchema.parse(await refused.json()).reasons![0]).toMatch(/\.id can't change/);
+      expect((await visualPut(setUp(rows()).app, { cut: "technical", sectionId: section.id, visual: { type: "nope" } })).status).toBe(400);
+    });
+
     it("closes edits once the PR is merged", async () => {
       const merged = { ...draft, pr: { ...draft.pr, state: "merged" as const } };
       const res = await put(setUp(rows(merged)).app, { cut: "technical", sectionId: spoken().id, narration: "Hi." });

@@ -5,6 +5,7 @@ import {
   NarrationEditSchema,
   RepoSettingUpdateSchema,
   RevisionRequestSchema,
+  VisualEditSchema,
   type CatchList,
   type EditError,
   type RepoSetting,
@@ -13,6 +14,7 @@ import {
 } from "@kiasm-tech/star-catch-contracts";
 import {
   editNarration,
+  editVisual,
   reviseNarration,
   type CatchStore,
   type EditOutcome,
@@ -109,6 +111,13 @@ export function createApp({ token, catches, settings, runs, revise, reviseMs = R
     if (!edit.success) return c.json(refused("bad-request", `The body must be { cut, sectionId, narration } with up to ${API_LIMITS.narration} characters`), 400);
     const catchId = c.req.param("catchId");
     return answer(c, catchId, "narration", await editNarration({ catches }, catchId, edit.data));
+  });
+
+  app.put("/v1/catches/:catchId/visual", async (c) => {
+    const edit = VisualEditSchema.safeParse(await c.req.json().catch(() => undefined));
+    if (!edit.success) return c.json(refused("bad-request", "The body must be { cut, sectionId, visual } with a picture that passes its schema"), 400);
+    const catchId = c.req.param("catchId");
+    return answer(c, catchId, "visual", await editVisual({ catches }, catchId, edit.data));
   });
 
   app.post("/v1/catches/:catchId/revise", async (c) => {
