@@ -1,8 +1,8 @@
-import { CatchListSchema, RepoSettingSchema, StoredCatchSchema, UsageListSchema, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
-import { buildCatch, mockClassifier, templateWriter, type StoredVersion } from "@star-catch/pipeline";
+import { CatchListSchema, EditErrorSchema, RepoSettingSchema, StoredCatchSchema, UsageListSchema, type CatchVersion, type ScriptSection } from "@kiasm-tech/star-catch-contracts";
+import { buildCatch, mockClassifier, templateWriter, type ScriptWriter, type StoredVersion } from "@star-catch/pipeline";
 import { loadSyntheticFixtures } from "@star-catch/testkit";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "./http.js";
+import { createApp, type ApiDeps } from "./http.js";
 
 const TOKEN = "t0ken";
 const auth = { authorization: `Bearer ${TOKEN}` };
@@ -12,7 +12,10 @@ beforeAll(async () => {
   version = await buildCatch(loadSyntheticFixtures()[0]!.snapshot, { classifier: mockClassifier, writer: templateWriter });
 });
 
-function setUp(rows: StoredVersion[] = [{ headSha: "abc1234", generatedAt: new Date("2026-10-05T10:00:00Z"), version }]) {
+function setUp(
+  rows: StoredVersion[] = [{ headSha: "abc1234", generatedAt: new Date("2026-10-05T10:00:00Z"), version }],
+  { revise = null as ApiDeps["revise"], edited = [] as CatchVersion[] } = {},
+) {
   const enabled = new Set<string>(["acme/shop"]);
   const logs: Record<string, unknown>[] = [];
   const asked: { repos: string[]; limit?: number }[] = [];
@@ -20,6 +23,10 @@ function setUp(rows: StoredVersion[] = [{ headSha: "abc1234", generatedAt: new D
     token: TOKEN,
     catches: {
       save: async () => {},
+      edit: async (v) => {
+        edited.push(v);
+        return true;
+      },
       latest: async (id) => rows.find((r) => (r.version as CatchVersion).catchId === id) ?? null,
       list: async (repos, limit) => {
         asked.push({ repos, limit });
@@ -44,6 +51,7 @@ function setUp(rows: StoredVersion[] = [{ headSha: "abc1234", generatedAt: new D
         },
       ],
     },
+    revise,
     log: (entry) => void logs.push(entry),
   });
   return { app, logs, asked };
@@ -120,5 +128,90 @@ describe("api", () => {
   it("rejects a settings body that isn't { enabled }", async () => {
     const res = await setUp().app.request("/v1/repos/acme/api/settings", { method: "PUT", headers: auth, body: "on" });
     expect(res.status).toBe(400);
+  });
+
+  describe("edits", () => {
+    const { snapshot } = loadSyntheticFixtures().find((f) => f.name === "05-condition-change")!;
+    let draft: CatchVersion;
+    beforeAll(async () => {
+      draft = await buildCatch(snapshot, { classifier: mockClassifier, writer: templateWriter });
+    });
+    const rows = (v = draft): StoredVersion[] => [{ headSha: "abc1234", generatedAt: new Date("2026-10-05T10:00:00Z"), version: v }];
+    const json = { ...auth, "content-type": "application/json" };
+    const spoken = (): ScriptSection => draft.technical!.chapters.flatMap((c) => c.sections).find((s) => Object.keys(s.reveals).length > 0)!;
+    const put = (app: ReturnType<typeof setUp>["app"], body: unknown, id = draft.catchId) =>
+      app.request(`/v1/catches/${id}/narration`, { method: "PUT", headers: json, body: JSON.stringify(body) });
+    const post = (app: ReturnType<typeof setUp>["app"], body: unknown) =>
+      app.request(`/v1/catches/${draft.catchId}/revise`, { method: "POST", headers: json, body: JSON.stringify(body) });
+
+    it("sets a section's narration and answers the edited catch", async () => {
+      const edited: CatchVersion[] = [];
+      const { app, logs } = setUp(rows(), { edited });
+      const res = await put(app, { cut: "technical", sectionId: spoken().id, narration: '  <mark name="m1"/>In plain words.  ' });
+      expect(res.status).toBe(200);
+      const body = StoredCatchSchema.parse(await res.json());
+      expect(body.headSha).toBe("abc1234");
+      expect(body.version).toEqual(edited[0]);
+      expect(body.version.technical!.chapters.flatMap((c) => c.sections).find((s) => s.id === spoken().id)!.narration).toBe('<mark name="m1"/>In plain words.');
+      expect(logs).toEqual([{ outcome: "narration-edited", catchId: draft.catchId }]);
+    });
+
+    it.each([
+      [{ cut: "technical", sectionId: "x" }, 400],
+      [{ cut: "video", sectionId: "x", narration: "Hi." }, 400],
+      [{ cut: "technical", sectionId: "x", narration: "x".repeat(4_001) }, 400],
+      [{ cut: "technical", sectionId: "nope", narration: "Hi." }, 404],
+    ])("answers %j with %i", async (body, status) => {
+      expect((await put(setUp(rows()).app, body)).status).toBe(status);
+    });
+
+    it("explains a refused edit", async () => {
+      const res = await put(setUp(rows()).app, { cut: "technical", sectionId: spoken().id, narration: '<mark name="zz"/>Hi.' });
+      expect(res.status).toBe(422);
+      expect(EditErrorSchema.parse(await res.json()).reasons).toEqual(['no element or voice mark named "zz"']);
+      expect((await put(setUp(rows()).app, { cut: "technical", sectionId: spoken().id, narration: "Hi." }, "acme__shop__1")).status).toBe(404);
+    });
+
+    it("closes edits once the PR is merged", async () => {
+      const merged = { ...draft, pr: { ...draft.pr, state: "merged" as const } };
+      const res = await put(setUp(rows(merged)).app, { cut: "technical", sectionId: spoken().id, narration: "Hi." });
+      expect(res.status).toBe(409);
+      expect(EditErrorSchema.parse(await res.json())).toEqual({ code: "not-draft", error: "Published — edits are closed" });
+    });
+
+    it("is 503 without a model to revise with", async () => {
+      const res = await post(setUp(rows()).app, { cut: "technical", sectionId: spoken().id, instruction: "Shorter" });
+      expect(res.status).toBe(503);
+      expect(EditErrorSchema.parse(await res.json()).code).toBe("not-configured");
+      expect((await post(setUp(rows()).app, { cut: "technical", sectionId: spoken().id })).status).toBe(400);
+    });
+
+    const reviser = (writer: ScriptWriter): ApiDeps["revise"] => () => ({
+      snapshots: { has: async () => true, save: async () => {}, find: async () => snapshot },
+      ports: { classifier: mockClassifier, writer },
+    });
+
+    it("revises a section with the writer, as instructed", async () => {
+      const asked: (string | undefined)[] = [];
+      const writer: ScriptWriter = {
+        id: "fake",
+        write: async (request) => {
+          asked.push(request.instruction);
+          return [{ text: "Shorter, as asked.", sources: ["pr:title"] }];
+        },
+      };
+      const res = await post(setUp(rows(), { revise: reviser(writer) }).app, { cut: "technical", sectionId: spoken().id, instruction: "Shorter" });
+      expect(res.status).toBe(200);
+      const section = StoredCatchSchema.parse(await res.json()).version.technical!.chapters.flatMap((c) => c.sections).find((s) => s.id === spoken().id)!;
+      expect(section.narration).toBe("Shorter, as asked.");
+      expect(asked).toEqual(["Shorter"]);
+    });
+
+    it("is 502 when the writer fails", async () => {
+      const writer: ScriptWriter = { id: "broken", write: async () => Promise.reject(new Error("down")) };
+      const { app, logs } = setUp(rows(), { revise: reviser(writer) });
+      expect((await post(app, { cut: "technical", sectionId: spoken().id, instruction: "Shorter" })).status).toBe(502);
+      expect(logs).toEqual([expect.objectContaining({ outcome: "revise-failed", error: "down" })]);
+    });
   });
 });
