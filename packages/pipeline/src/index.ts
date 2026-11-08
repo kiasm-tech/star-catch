@@ -57,7 +57,7 @@ export { modelWriter, WRITER_CUT_PROMPT, WRITER_PROMPT, WRITER_PROMPT_ID } from 
 export { checkSection, type CheckInput, type Checked } from "./script/checks.js";
 export { generateScripts, reviseSection, type Revision, type ScriptOptions, type Scripts } from "./script/generate.js";
 export { buildScripts, prInfoOf, type ScriptPorts } from "./usecases/build-scripts.js";
-export { editNarration, reviseNarration, type EditDeps, type EditOutcome, type ReviseDeps } from "./usecases/edit-catch.js";
+export { editNarration, editVisual, reviseNarration, type EditDeps, type EditOutcome, type ReviseDeps } from "./usecases/edit-catch.js";
 export { buildCatch } from "./usecases/build-catch.js";
 export { updatePrState, type PrStateOutcome } from "./usecases/update-pr-state.js";
 export { generateCatch, type GenerateDeps, type GenerateOutcome } from "./usecases/generate-catch.js";

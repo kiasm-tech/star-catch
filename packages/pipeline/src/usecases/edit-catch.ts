@@ -1,4 +1,4 @@
-/** Edits to a draft catch from Crux: a person's own narration, or the writer's on their instruction. */
+/** Edits to a draft catch from Crux: a person's own narration or picture wording, or the writer's narration on their instruction. */
 import {
   CatchVersionSchema,
   PullRequestSnapshotSchema,
@@ -8,12 +8,14 @@ import {
   type RevisionRequest,
   type Script,
   type ScriptSection,
+  type VisualEdit,
 } from "@kiasm-tech/star-catch-contracts";
 import type { CatchStore, RunLog } from "../ports/catch-store.js";
 import type { SnapshotStore } from "../ports/snapshot-store.js";
 import type { UsageMeter } from "../ports/usage.js";
 import { reviseSection, voiceMarks } from "../script/generate.js";
 import { elementIds } from "../visuals/elements.js";
+import { rewordingProblems } from "../visuals/rewording.js";
 import { buildContext, type ContextOptions } from "./build-context.js";
 import { prInfoOf, type ScriptPorts } from "./build-scripts.js";
 
@@ -95,6 +97,19 @@ export async function editNarration({ catches }: EditDeps, catchId: string, edit
   if (reasons.length > 0) return { outcome: "invalid", reasons };
   const section = { ...loaded.section, ...voiceMarks([{ text, sources: [] }]) };
   return store(catches, loaded, edit.cut, section, []);
+}
+
+/**
+ * A person's rewording of one section's picture: only its prose may differ (VISUAL_TEXT_FIELDS), so its ids,
+ * and the narration's marks on them, still hold. The section's flags are about its narration and stay.
+ */
+export async function editVisual({ catches }: EditDeps, catchId: string, edit: VisualEdit): Promise<EditOutcome> {
+  const loaded = await load(catches, catchId, edit.cut, edit.sectionId);
+  if ("outcome" in loaded) return loaded;
+  const reasons = rewordingProblems(loaded.section.visual, edit.visual);
+  if (reasons.length > 0) return { outcome: "invalid", reasons };
+  const flags = loaded.script.flags.filter((f) => f.sectionId === loaded.section.id).map((f) => f.message);
+  return store(catches, loaded, edit.cut, { ...loaded.section, visual: edit.visual }, flags);
 }
 
 /** The writer rewrites one section as asked, checked like a generated one; the run and its tokens are recorded. */

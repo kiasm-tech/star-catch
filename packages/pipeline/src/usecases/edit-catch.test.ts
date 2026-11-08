@@ -1,4 +1,4 @@
-import type { CatchVersion, Script, ScriptSection } from "@kiasm-tech/star-catch-contracts";
+import { VISUAL_TEXT_FIELDS, type CatchVersion, type Script, type ScriptSection, type Visual } from "@kiasm-tech/star-catch-contracts";
 import { loadSyntheticFixtures } from "@star-catch/testkit";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { mockClassifier } from "../classifier.js";
@@ -8,7 +8,7 @@ import { memoryMeter } from "../ports/usage.js";
 import { templateWriter } from "../script/template-writer.js";
 import { elementIds } from "../visuals/elements.js";
 import { buildCatch } from "./build-catch.js";
-import { editNarration, reviseNarration } from "./edit-catch.js";
+import { editNarration, editVisual, reviseNarration } from "./edit-catch.js";
 
 const { snapshot } = loadSyntheticFixtures().find((f) => f.name === "05-condition-change")!;
 const HEAD = snapshot.headSha;
@@ -82,6 +82,51 @@ describe("editNarration", () => {
     expect(await editNarration(setUp(), "acme__shop__999", edit)).toEqual({ outcome: "no-catch" });
     expect(await editNarration(setUp(), built.catchId, { ...edit, sectionId: "nope" })).toEqual({ outcome: "no-section" });
     expect(await editNarration(setUp(built, { wins: false }), built.catchId, edit)).toEqual({ outcome: "conflict" });
+  });
+});
+
+describe("editVisual", () => {
+  const TEXT = new Set<string>(VISUAL_TEXT_FIELDS);
+  /** The picture with every prose string reworded. */
+  const reworded = (visual: Visual): Visual => {
+    const walk = (value: unknown, key: string | null): unknown => {
+      if (typeof value === "string" && key !== null && TEXT.has(key)) return "Reworded";
+      if (Array.isArray(value)) return value.map((v) => walk(v, key));
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, walk(v, k)]));
+      return value;
+    };
+    return { ...visual, data: walk(visual.data, null) } as Visual;
+  };
+  const pictured = (version: CatchVersion) => sectionsOf(version.technical!).find((s) => JSON.stringify(reworded(s.visual)) !== JSON.stringify(s.visual))!;
+
+  it("replaces one section's picture with its prose reworded, keeping its narration and flags", async () => {
+    const section = pictured(built);
+    const flagged: CatchVersion = { ...built, technical: { ...built.technical!, flags: [...built.technical!.flags, { sectionId: section.id, message: "too long" }] } };
+    const { catches, edits } = setUp(flagged);
+
+    const result = await editVisual({ catches }, built.catchId, { cut: "technical", sectionId: section.id, visual: reworded(section.visual) });
+
+    expect(result.outcome).toBe("edited");
+    const edited = sectionsOf(edits[0]!.version.technical!).find((s) => s.id === section.id)!;
+    expect(edited).toEqual({ ...section, visual: reworded(section.visual) });
+    expect(edits[0]!.version.technical!.flags.filter((f) => f.sectionId === section.id)).toEqual([{ sectionId: section.id, message: "too long" }]);
+    expect(sectionsOf(edits[0]!.version.technical!).filter((s) => s.id !== section.id)).toEqual(sectionsOf(built.technical!).filter((s) => s.id !== section.id));
+  });
+
+  it("refuses a picture that changed more than its prose, and the same cases as a narration", async () => {
+    const section = pictured(built);
+    const other = sectionsOf(built.technical!).find((s) => s.visual.type !== section.visual.type)!;
+    const { catches, edits } = setUp();
+    const result = await editVisual({ catches }, built.catchId, { cut: "technical", sectionId: section.id, visual: other.visual });
+    expect(result).toEqual({ outcome: "invalid", reasons: [`the picture is a ${section.visual.type} and stays one`] });
+    expect(edits).toEqual([]);
+
+    const edit = { cut: "technical" as const, sectionId: section.id, visual: section.visual };
+    const merged = { ...built, pr: { ...built.pr, state: "merged" as const } };
+    expect(await editVisual(setUp(merged), built.catchId, edit)).toEqual({ outcome: "not-draft" });
+    expect(await editVisual(setUp(), "acme__shop__999", edit)).toEqual({ outcome: "no-catch" });
+    expect(await editVisual(setUp(), built.catchId, { ...edit, sectionId: "nope" })).toEqual({ outcome: "no-section" });
+    expect(await editVisual(setUp(built, { wins: false }), built.catchId, edit)).toEqual({ outcome: "conflict" });
   });
 });
 
