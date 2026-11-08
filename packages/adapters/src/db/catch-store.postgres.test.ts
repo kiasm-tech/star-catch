@@ -39,6 +39,25 @@ describe("PostgresCatchStore", () => {
     expect(await store.latest("acme__shop__999")).toBeNull();
   });
 
+  it("edits the version it read, and only while it is still the latest", async () => {
+    const store = new PostgresCatchStore(db);
+    const base = await catchOf("06-config-key");
+    const titled = (title: string): CatchVersion => ({ ...base, pr: { ...base.pr, title } });
+    await store.save(base, "sha-e1");
+    const read = (await store.latest(base.catchId))!;
+
+    expect(await store.edit(titled("Edited"), "sha-e1", read.generatedAt)).toBe(true);
+    expect(CatchVersionSchema.parse((await store.latest(base.catchId))!.version).pr.title).toBe("Edited");
+    // That read is stale now.
+    expect(await store.edit(titled("Again"), "sha-e1", read.generatedAt)).toBe(false);
+
+    const current = (await store.latest(base.catchId))!;
+    await store.save(titled("Newer push"), "sha-e2");
+    // An older commit's version never comes back on top.
+    expect(await store.edit(titled("Late"), "sha-e1", current.generatedAt)).toBe(false);
+    expect(await store.latest(base.catchId)).toMatchObject({ headSha: "sha-e2" });
+  });
+
   it("lists the latest version of each catch in the asked repos, newest first", async () => {
     const store = new PostgresCatchStore(db);
     const older = await catchOf("03-rename-only");
