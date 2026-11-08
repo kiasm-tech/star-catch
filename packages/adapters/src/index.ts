@@ -19,3 +19,4 @@ export { FileLabelCache } from "./labels/label-cache.file.js";
 export { MockLlm } from "./llm/llm.mock.js";
 export { OpenAiLlm, type OpenAiOptions } from "./llm/llm.openai.js";
 export { AnthropicLlm, type AnthropicOptions } from "./llm/llm.real.js";
+export { scriptPorts } from "./llm/script-ports.js";
