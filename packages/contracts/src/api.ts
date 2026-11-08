@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { CatchVersionSchema } from "./catch.js";
 import { CUTS } from "./script.js";
+import { VisualSchema } from "./visuals.js";
 
 const FullNameSchema = z.string().regex(/^[^/\s]+\/[^/\s]+$/);
 
@@ -88,6 +89,24 @@ export const RevisionRequestSchema = z.object({
   instruction: z.string().trim().min(1).max(API_LIMITS.instruction),
 });
 export type RevisionRequest = z.infer<typeof RevisionRequestSchema>;
+
+/**
+ * The only fields of a picture a person may reword (since 0.13.0): its prose. Ids, layout, states, numbers,
+ * file paths, code names (`name`), declaration lines and metric values are the PR's facts and stay as built.
+ */
+export const VISUAL_TEXT_FIELDS = ["label", "text", "title", "condition", "risk", "mitigation"] as const;
+
+/**
+ * `PUT /v1/catches/:catchId/visual` (since 0.13.0): a section's picture with its wording changed by a person.
+ * The same picture otherwise: only string values of `VISUAL_TEXT_FIELDS` may differ. Drafts only; answers the
+ * edited catch.
+ */
+export const VisualEditSchema = z.object({
+  cut: z.enum(CUTS),
+  sectionId: z.string().min(1),
+  visual: VisualSchema,
+});
+export type VisualEdit = z.infer<typeof VisualEditSchema>;
 
 export const EDIT_ERROR_CODES = ["bad-request", "no-catch", "no-section", "not-draft", "conflict", "no-snapshot", "invalid", "writer-failed", "not-configured"] as const;
 
