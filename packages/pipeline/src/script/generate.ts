@@ -9,7 +9,7 @@ import {
   type ScriptSection,
   type SectionPlan,
 } from "@kiasm-tech/star-catch-contracts";
-import type { ScriptWriter, SectionBrief, UnitChange, WrittenSentence } from "../ports/script-writer.js";
+import type { CutRequest, ScriptWriter, SectionBrief, UnitChange, WrittenSentence } from "../ports/script-writer.js";
 import { buildVisual, type PrInfo, type VisualInput } from "../visuals/build.js";
 import { revealable } from "../visuals/elements.js";
 import { labelsOf, mapLabels } from "../visuals/labels.js";
@@ -68,7 +68,7 @@ function changesOf(context: Context, max = 12): UnitChange[] {
 export type Scripts = Record<Cut, Script | null>;
 
 /** Marks named after element ids become `m1`, `m2`… in reading order; `reveals` maps them back. */
-function voiceMarks(sentences: WrittenSentence[]): { narration: string; reveals: Record<string, string> } {
+export function voiceMarks(sentences: WrittenSentence[]): { narration: string; reveals: Record<string, string> } {
   const reveals: Record<string, string> = {};
   const names = new Map<string, string>();
   const narration = sentences
@@ -84,7 +84,19 @@ function voiceMarks(sentences: WrittenSentence[]): { narration: string; reveals:
   return { narration, reveals };
 }
 
-async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPlan, options: ScriptOptions): Promise<Script> {
+type Planned = { brief: SectionBrief; readMore: boolean; draft: boolean; visualFlags: string[] };
+
+interface Prepared {
+  planned: Planned[];
+  /** What every request to the writer carries. */
+  shared: Pick<CutRequest, "cut" | "sentences" | "changes" | "pr" | "instruction">;
+  check(p: Planned, written: WrittenSentence[]): Checked;
+  /** The picture's words must pass the same checks as narration. */
+  problemWith(label: string, original: { text: string; max: number }): string | undefined;
+}
+
+/** Everything a cut's sections are briefed and checked from. */
+function prepare(context: Context, pr: PrInfo, cut: Cut, plan: SectionPlan, instruction: string | undefined): Prepared {
   const input: VisualInput = { context, pr, cut, plan };
   const known = new Set(["pr:title", ...context.units.map((u) => u.id), ...context.sentences.map((s) => s.id)]);
   const evidence = new Set(context.facts.filter((f) => f.group === "evidence").flatMap((f) => (Array.isArray(f.value) ? f.value : [])));
@@ -99,11 +111,6 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
   ];
   // The writer reads the PR's words with code names spelled out, so it has nothing to copy them from.
   const sentences = context.sentences.filter((s) => s.class !== "noise").map((s) => ({ ...s, text: deCode(s.text) }));
-  const flags: ScriptFlag[] = [];
-  const fail = (sectionId: string, error: unknown) =>
-    flags.push({ sectionId, message: `the writer failed: ${error instanceof Error ? error.message : String(error)}` });
-
-  type Planned = { brief: SectionBrief; readMore: boolean; draft: boolean; visualFlags: string[] };
   const planned: Planned[] = [
     ...plan.chapters.flatMap((c) => c.sections.map((s) => ({ id: s.id as string, wordLimit: s.wordLimit, readMore: s.readMore, draft: false }))),
     ...plan.draft.map((d) => ({ id: d.id as string, wordLimit: d.wordLimit, readMore: false, draft: true })),
@@ -127,7 +134,18 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     return { brief, readMore, draft, visualFlags: built.flags.map((f) => f.replace(/^[^:]+: /, "")) };
   });
 
-  const shared = { cut, sentences, changes: changesOf(context), pr: { title: pr.title }, ...(options.instruction && { instruction: options.instruction }) };
+  const shared = { cut, sentences, changes: changesOf(context), pr: { title: pr.title }, ...(instruction && { instruction }) };
+  const check = (p: Planned, written: WrittenSentence[]): Checked =>
+    checkSection({ cut, draft: p.draft, sentences: written, visual: p.brief.visual, known, evidence, components, codeNames, wordLimit: p.brief.wordLimit, minWords: p.brief.minWords });
+  const problemWith = (label: string, original: { text: string; max: number }) => labelProblem({ cut, text: label, original: original.text, max: original.max, evidence, components, codeNames });
+  return { planned, shared, check, problemWith };
+}
+
+async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPlan, options: ScriptOptions): Promise<Script> {
+  const { planned, shared, check, problemWith } = prepare(context, pr, cut, plan, options.instruction);
+  const flags: ScriptFlag[] = [];
+  const fail = (sectionId: string, error: unknown) =>
+    flags.push({ sectionId, message: `the writer failed: ${error instanceof Error ? error.message : String(error)}` });
   const first = new Map<string, WrittenSentence[]>();
   const relabels = new Map<string, Record<string, string>>();
   if (options.writer.writeCut) {
@@ -148,8 +166,6 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     }
   }
 
-  const check = (p: Planned, written: WrittenSentence[]): Checked =>
-    checkSection({ cut, draft: p.draft, sentences: written, visual: p.brief.visual, known, evidence, components, codeNames, wordLimit: p.brief.wordLimit, minWords: p.brief.minWords });
   const dropped = (c: Checked) => c.flags.filter((f) => f.startsWith("dropped"));
 
   /** The picture in the writer's words where they pass the checks; else its own, code spelled out for business. */
@@ -159,7 +175,7 @@ async function scriptFor(context: Context, pr: PrInfo, cut: Cut, plan: SectionPl
     for (const [id, text] of Object.entries(relabels.get(p.brief.id) ?? {})) {
       const original = originals.get(id);
       if (!original) continue;
-      const problem = labelProblem({ cut, text, original: original.text, max: original.max, evidence, components, codeNames });
+      const problem = problemWith(text, original);
       if (problem) flags.push({ sectionId: p.brief.id, message: `kept the picture's own words for ${id}: ${problem}` });
       else accepted.set(id, text.trim());
     }
@@ -227,4 +243,37 @@ export async function generateScripts(context: Context, pr: PrInfo, options: Scr
     scripts[cut] = plan.gate.outcome === "none" ? null : await scriptFor(context, pr, cut, plan, options);
   }
   return scripts;
+}
+
+export type Revision =
+  | { outcome: "revised"; section: ScriptSection; flags: string[] }
+  /** Nothing the writer returned passed the checks; the section stays as it was. */
+  | { outcome: "rejected"; reasons: string[] }
+  /** The cut has no such section any more. */
+  | { outcome: "missing" };
+
+/** One section's narration written again on a developer's request, with the same checks; its picture stays. */
+export async function reviseSection(
+  context: Context,
+  pr: PrInfo,
+  cut: Cut,
+  current: ScriptSection,
+  options: { writer: ScriptWriter; open: boolean; instruction: string; signal?: AbortSignal },
+): Promise<Revision> {
+  const plan = selectSections(context, cut, { open: options.open });
+  const { planned, shared, check } = prepare(context, pr, cut, plan, options.instruction);
+  const p = planned.find((s) => s.brief.id === current.id);
+  if (!p) return { outcome: "missing" };
+  let checked = check(p, await options.writer.write({ ...shared, ...p.brief }, options.signal));
+  const dropped = (c: Checked) => c.flags.filter((f) => f.startsWith("dropped"));
+  if (dropped(checked).length > 0 || checked.sentences.length === 0) {
+    const retry = check(p, await options.writer.write({ ...shared, ...p.brief, repair: dropped(checked).length > 0 ? dropped(checked) : checked.flags }, options.signal));
+    if (retry.sentences.length > 0 && (checked.sentences.length === 0 || dropped(retry).length < dropped(checked).length)) checked = retry;
+  }
+  if (checked.sentences.length === 0) return { outcome: "rejected", reasons: checked.flags };
+  return {
+    outcome: "revised",
+    section: { ...current, ...voiceMarks(checked.sentences), sources: [...new Set(checked.sentences.flatMap((s) => s.sources))] },
+    flags: [...p.visualFlags, ...checked.flags],
+  };
 }

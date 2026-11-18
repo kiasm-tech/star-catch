@@ -16,7 +16,7 @@ function setUp({ enabled = true, stored = true, writer = templateWriter }: { ena
   const deps = {
     settings: { isEnabled: async () => enabled },
     snapshots: { has: async () => stored, save: async () => {}, find: async () => (stored ? snapshot : null) },
-    catches: { save: async (version: CatchVersion, headSha: string) => void saved.push({ version, headSha }), latest: async () => null, list: async () => [] },
+    catches: { save: async (version: CatchVersion, headSha: string) => void saved.push({ version, headSha }), edit: async () => true, latest: async () => null, list: async () => [] },
     runs,
     ports: { classifier: mockClassifier, writer },
   };

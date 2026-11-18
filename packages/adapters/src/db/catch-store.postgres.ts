@@ -1,5 +1,6 @@
 import { repoKey, type CatchVersion } from "@kiasm-tech/star-catch-contracts";
 import type { CatchStore, RunLog, RunRecord, RunStatus, StoredVersion, TokenUsage } from "@star-catch/pipeline";
+import { sql } from "kysely";
 import type { StarCatchDb } from "./database.js";
 import { toJsonb } from "./jsonb.js";
 
@@ -15,6 +16,21 @@ export class PostgresCatchStore implements CatchStore {
       .values(row)
       .onConflict((oc) => oc.columns(["catch_id", "head_sha"]).doUpdateSet({ version: row.version, created_at: new Date() }))
       .execute();
+  }
+
+  async edit(version: CatchVersion, headSha: string, basedOn: Date): Promise<boolean> {
+    // Dates come back to JS in milliseconds; now() stores microseconds.
+    const result = await this.db
+      .updateTable("star_catch.catch_versions")
+      .set({ version: toJsonb(version), created_at: new Date() })
+      .where("catch_id", "=", version.catchId)
+      .where("head_sha", "=", headSha)
+      .where(sql<boolean>`date_trunc('milliseconds', created_at) = ${basedOn}`)
+      .where(
+        sql<boolean>`not exists (select 1 from star_catch.catch_versions newer where newer.catch_id = ${version.catchId} and newer.created_at > star_catch.catch_versions.created_at)`,
+      )
+      .executeTakeFirst();
+    return result.numUpdatedRows > 0n;
   }
 
   async latest(catchId: string): Promise<StoredVersion | null> {

@@ -1,12 +1,10 @@
 import { fileURLToPath } from "node:url";
 import {
-  AnthropicLlm,
   FileFixtureStore,
   GitHubApp,
   GitHubAppPullRequestComments,
   GitHubAppPullRequestSource,
   MemoryPullRequestComments,
-  OpenAiLlm,
   PgBossJobQueue,
   PostgresCatchStore,
   PostgresRepoSettings,
@@ -16,22 +14,9 @@ import {
   appCredentials,
   connect,
   isMock,
+  scriptPorts,
 } from "@star-catch/adapters";
-import {
-  QUEUES,
-  mockClassifier,
-  memoryMeter,
-  modelClassifier,
-  modelWriter,
-  templateWriter,
-  type CommentDeps,
-  type GenerateDeps,
-  type IngestDeps,
-  type JobQueue,
-  type Llm,
-  type ScriptPorts,
-  type UsageMeter,
-} from "@star-catch/pipeline";
+import { QUEUES, memoryMeter, type CommentDeps, type GenerateDeps, type IngestDeps, type JobQueue } from "@star-catch/pipeline";
 
 export type Env = Record<string, string | undefined>;
 export type Log = (entry: Record<string, unknown>) => void;
@@ -50,25 +35,6 @@ const MOCK_CRUX_URL = "http://localhost:3000";
 const DEFAULT_FIXTURES_DIR = fileURLToPath(new URL("../../../fixtures/", import.meta.url));
 
 export const jsonLog: Log = (entry) => console.log(JSON.stringify(entry));
-
-/** A hosted model by the keys that are set: Anthropic first, then an OpenAI-compatible endpoint. */
-function llmFor(env: Env, model: string, meter: UsageMeter, step: string): Llm {
-  if (env.ANTHROPIC_API_KEY) return new AnthropicLlm({ apiKey: env.ANTHROPIC_API_KEY, model, meter, step });
-  if (env.OPENAI_API_KEY) return new OpenAiLlm({ apiKey: env.OPENAI_API_KEY, model, meter, step, ...(env.OPENAI_BASE_URL && { baseURL: env.OPENAI_BASE_URL }) });
-  throw new Error(`Set ANTHROPIC_API_KEY, or OPENAI_API_KEY (and OPENAI_BASE_URL), to call ${model}`);
-}
-
-/** The classifier and writer: offline in mock mode, else the models named in env. */
-function modelPorts(env: Env, meter: UsageMeter): ScriptPorts {
-  if (isMock("llm", env)) return { classifier: mockClassifier, writer: templateWriter };
-  const classifierModel = env.STAR_CATCH_CLASSIFIER_MODEL;
-  const writerModel = env.STAR_CATCH_WRITER_MODEL ?? classifierModel;
-  if (!classifierModel || !writerModel) throw new Error("Missing env vars: STAR_CATCH_CLASSIFIER_MODEL (and STAR_CATCH_WRITER_MODEL to write with another model)");
-  return {
-    classifier: modelClassifier(llmFor(env, classifierModel, meter, "classify"), classifierModel),
-    writer: modelWriter(llmFor(env, writerModel, meter, "write"), writerModel),
-  };
-}
 
 /** The classifier's time for one PR. A job, not a request, so it can wait: past it, changes go unlabelled. */
 const CLASSIFY_BUDGET_MS = 120_000;
@@ -90,7 +56,7 @@ export async function compose(env: Env): Promise<Worker> {
   const comments = app ? new GitHubAppPullRequestComments(app) : new MemoryPullRequestComments();
   const cruxUrl = env.CRUX_PUBLIC_URL ?? (mockGitHub ? MOCK_CRUX_URL : undefined);
   const meter = memoryMeter();
-  const ports = modelPorts(env, meter);
+  const ports = scriptPorts(env, meter);
 
   const db = connect(env.DATABASE_URL);
   const queue = await PgBossJobQueue.start(env.DATABASE_URL, QUEUES);

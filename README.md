@@ -25,6 +25,12 @@ DATABASE_URL=… GITHUB_WEBHOOK_SECRET=dev pnpm intake           # webhook recei
 DATABASE_URL=… STAR_CATCH_REPOS=pmndrs/zustand STAR_CATCH_MOCK_GITHUB=true STAR_CATCH_MOCK_LLM=true pnpm worker --watch
 DATABASE_URL=… STAR_CATCH_API_TOKEN=dev PORT=8081 pnpm api   # what Crux reads, on :8081
 curl -H "authorization: Bearer dev" "localhost:8081/v1/usage?repos=pmndrs/zustand"   # tokens each run used
+curl -X PUT -H "authorization: Bearer dev" "localhost:8081/v1/catches/<catchId>/narration" \
+  -d '{"cut":"technical","sectionId":"headline","narration":"In plain words."}'      # edit a section by hand
+curl -X PUT -H "authorization: Bearer dev" "localhost:8081/v1/catches/<catchId>/visual" \
+  -d '{"cut":"technical","sectionId":"headline","visual":{…}}'                        # reword its picture
+curl -X POST -H "authorization: Bearer dev" "localhost:8081/v1/catches/<catchId>/revise" \
+  -d '{"cut":"technical","sectionId":"headline","instruction":"Shorter"}'           # or ask the writer
 GITHUB_WEBHOOK_SECRET=dev pnpm replay fixtures/webhooks/pmndrs__zustand__3469.opened.json
 ```
 

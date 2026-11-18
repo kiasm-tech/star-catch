@@ -21,6 +21,7 @@ function store(initial: StoredVersion | null) {
   const saved: { version: CatchVersion; headSha: string }[] = [];
   const catches: CatchStore = {
     save: async (version, headSha) => void saved.push({ version, headSha }),
+    edit: async () => true,
     latest: async () => initial,
     list: async () => [],
   };

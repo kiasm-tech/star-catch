@@ -2,14 +2,28 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import {
   API_LIMITS,
   CatchVersionSchema,
+  NarrationEditSchema,
   RepoSettingUpdateSchema,
+  RevisionRequestSchema,
+  VisualEditSchema,
   type CatchList,
+  type EditError,
   type RepoSetting,
   type StoredCatch,
   type UsageList,
 } from "@kiasm-tech/star-catch-contracts";
-import type { CatchStore, RepoSettingsStore, RunLog, StoredVersion } from "@star-catch/pipeline";
-import { Hono } from "hono";
+import {
+  editNarration,
+  editVisual,
+  reviseNarration,
+  type CatchStore,
+  type EditOutcome,
+  type RepoSettingsStore,
+  type ReviseDeps,
+  type RunLog,
+  type StoredVersion,
+} from "@star-catch/pipeline";
+import { Hono, type Context } from "hono";
 
 export interface ApiDeps {
   /** The bearer token Crux sends. */
@@ -17,8 +31,26 @@ export interface ApiDeps {
   catches: CatchStore;
   settings: RepoSettingsStore;
   runs: Pick<RunLog, "recent">;
+  /** What the writer needs to revise a section, fresh per request so usage isn't shared; null without a model. */
+  revise: (() => Omit<ReviseDeps, "catches">) | null;
+  /** How long a revision may take before it's abandoned. */
+  reviseMs?: number;
   log(entry: Record<string, unknown>): void;
 }
+
+const REVISE_MS = 90_000;
+
+const refused = (code: EditError["code"], error: string): EditError => ({ code, error });
+
+const EDIT_STATUS = { "no-catch": 404, "no-section": 404, "not-draft": 409, conflict: 409, "no-snapshot": 409, invalid: 422 } as const;
+const EDIT_ERROR: Record<keyof typeof EDIT_STATUS, string> = {
+  "no-catch": "No such catch",
+  "no-section": "No such section in that cut",
+  "not-draft": "Published — edits are closed",
+  conflict: "The catch changed since it was read; read it again",
+  "no-snapshot": "The pull request's snapshot is gone; regenerate it instead",
+  invalid: "The edit didn't pass the checks",
+};
 
 const FULL_NAME = /^[^/\s,]+\/[^/\s,]+$/;
 const digest = (value: string) => createHash("sha256").update(value).digest();
@@ -29,7 +61,7 @@ function reposOf(query: string | undefined): string[] | null {
   return repos.length <= API_LIMITS.repos && repos.every((r) => FULL_NAME.test(r)) ? repos : null;
 }
 
-export function createApp({ token, catches, settings, runs, log }: ApiDeps): Hono {
+export function createApp({ token, catches, settings, runs, revise, reviseMs = REVISE_MS, log }: ApiDeps): Hono {
   const app = new Hono();
   const expected = digest(`Bearer ${token}`);
 
@@ -61,6 +93,45 @@ export function createApp({ token, catches, settings, runs, log }: ApiDeps): Hon
     const row = await catches.latest(c.req.param("catchId"));
     const body = row && served(row);
     return body ? c.json(body) : c.json({ error: "No such catch" }, 404);
+  });
+
+  /** An edit's outcome as the API answers it: the edited catch, or why not. */
+  const answer = (c: Context, catchId: string, kind: string, result: EditOutcome) => {
+    log({ outcome: `${kind}-${result.outcome}`, catchId, ...("reasons" in result && { reasons: result.reasons }) });
+    if (result.outcome === "edited") {
+      const body: StoredCatch = { headSha: result.headSha, generatedAt: result.generatedAt.toISOString(), version: result.version };
+      return c.json(body);
+    }
+    const body: EditError = { code: result.outcome, error: EDIT_ERROR[result.outcome], ...("reasons" in result && { reasons: result.reasons }) };
+    return c.json(body, EDIT_STATUS[result.outcome]);
+  };
+
+  app.put("/v1/catches/:catchId/narration", async (c) => {
+    const edit = NarrationEditSchema.safeParse(await c.req.json().catch(() => undefined));
+    if (!edit.success) return c.json(refused("bad-request", `The body must be { cut, sectionId, narration } with up to ${API_LIMITS.narration} characters`), 400);
+    const catchId = c.req.param("catchId");
+    return answer(c, catchId, "narration", await editNarration({ catches }, catchId, edit.data));
+  });
+
+  app.put("/v1/catches/:catchId/visual", async (c) => {
+    const edit = VisualEditSchema.safeParse(await c.req.json().catch(() => undefined));
+    if (!edit.success) return c.json(refused("bad-request", "The body must be { cut, sectionId, visual } with a picture that passes its schema"), 400);
+    const catchId = c.req.param("catchId");
+    return answer(c, catchId, "visual", await editVisual({ catches }, catchId, edit.data));
+  });
+
+  app.post("/v1/catches/:catchId/revise", async (c) => {
+    const request = RevisionRequestSchema.safeParse(await c.req.json().catch(() => undefined));
+    if (!request.success) return c.json(refused("bad-request", `The body must be { cut, sectionId, instruction } with up to ${API_LIMITS.instruction} characters`), 400);
+    if (!revise) return c.json(refused("not-configured", "Revising with a model isn't configured"), 503);
+    const catchId = c.req.param("catchId");
+    const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(reviseMs)]);
+    try {
+      return answer(c, catchId, "revise", await reviseNarration({ ...revise(), catches }, catchId, request.data, signal));
+    } catch (error) {
+      log({ outcome: "revise-failed", catchId, error: error instanceof Error ? error.message : String(error) });
+      return c.json(refused("writer-failed", "The writer failed; try again"), 502);
+    }
   });
 
   app.get("/v1/usage", async (c) => {
